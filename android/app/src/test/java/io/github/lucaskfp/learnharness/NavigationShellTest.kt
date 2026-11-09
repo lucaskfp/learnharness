@@ -29,7 +29,7 @@ class NavigationShellTest {
     fun opensOnSessions() {
         compose.setContent { LearnHarnessApp() }
 
-        compose.onNodeWithText("No sessions yet").assertExists()
+        compose.onNodeWithText("No Sessions yet").assertExists()
     }
 
     @Test
@@ -37,7 +37,7 @@ class NavigationShellTest {
         compose.setContent { LearnHarnessApp() }
 
         compose.onNodeWithContentDescription("LearnHarness").assertDoesNotExist()
-        compose.onNodeWithText("Graph").assertIsBelow(compose.onNodeWithText("No sessions yet"))
+        compose.onNodeWithText("Graph").assertIsBelow(compose.onNodeWithText("No Sessions yet"))
     }
 
     @Test
@@ -45,7 +45,7 @@ class NavigationShellTest {
     fun mediumWidthUsesNavigationRail() {
         compose.setContent { LearnHarnessApp() }
 
-        compose.onNodeWithText("Graph").assertIsLeftOf(compose.onNodeWithText("No sessions yet"))
+        compose.onNodeWithText("Graph").assertIsLeftOf(compose.onNodeWithText("No Sessions yet"))
     }
 
     @Test
@@ -57,7 +57,7 @@ class NavigationShellTest {
         val marks = compose.onAllNodesWithContentDescription("LearnHarness")
         val count = marks.fetchSemanticsNodes().size
         assertTrue("expected the mark on screen", (0 until count).any { marks[it].isDisplayed() })
-        compose.onNodeWithText("Graph").assertIsLeftOf(compose.onNodeWithText("No sessions yet"))
+        compose.onNodeWithText("Graph").assertIsLeftOf(compose.onNodeWithText("No Sessions yet"))
     }
 
     @Test
@@ -71,7 +71,7 @@ class NavigationShellTest {
         compose.onNodeWithText("Nothing to configure yet").assertExists()
 
         compose.onNodeWithText("Sessions").performClick()
-        compose.onNodeWithText("No sessions yet").assertExists()
+        compose.onNodeWithText("No Sessions yet").assertExists()
     }
 
     @Test
@@ -84,7 +84,7 @@ class NavigationShellTest {
 
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
 
-        compose.onNodeWithText("No sessions yet").assertExists()
+        compose.onNodeWithText("No Sessions yet").assertExists()
     }
 
     @Test

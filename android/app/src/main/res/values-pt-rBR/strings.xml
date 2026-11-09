@@ -6,4 +6,81 @@
     <string name="empty_sessions">Nenhuma sessão ainda</string>
     <string name="empty_graph">Seu grafo de conhecimento está vazio</string>
     <string name="empty_settings">Nada para configurar ainda</string>
+
+    <!-- Setup -->
+    <string name="setup_title">Configure o LearnHarness</string>
+    <string name="setup_intro">Escolha um provedor de modelos e cole sua chave de API. As chaves ficam criptografadas neste aparelho.</string>
+    <string name="setup_provider">Provedor</string>
+    <string name="provider_custom">Personalizado</string>
+    <string name="setup_api_key">Chave de API</string>
+    <string name="setup_api_key_optional">Chave de API (opcional)</string>
+    <string name="setup_test_key">Testar chave</string>
+    <string name="setup_key_testing">Testando a chave…</string>
+    <string name="setup_key_valid">A chave funciona</string>
+    <string name="setup_key_invalid">O provedor recusou esta chave. Confira e tente novamente.</string>
+    <string name="setup_base_url">URL base</string>
+    <string name="setup_model_name">Nome do modelo</string>
+    <string name="setup_models">Modelos padrão</string>
+    <string name="setup_models_hint">Usados ao iniciar uma sessão. Você pode escolher outro modelo em cada sessão.</string>
+    <string name="setup_models_locked">Teste sua chave para carregar os modelos.</string>
+    <string name="setup_continue">Continuar</string>
+    <string name="role_teaching">Ensino</string>
+    <string name="role_practice">Prática</string>
+    <string name="role_jobs">Tarefas em segundo plano</string>
+
+    <!-- Sessions -->
+    <string name="sessions_search">Buscar sessões</string>
+    <string name="filter_all">Todas</string>
+    <string name="filter_teaching">Ensino</string>
+    <string name="filter_practice">Prática</string>
+    <string name="kind_teaching">Sessão de ensino</string>
+    <string name="kind_practice">Sessão de prática</string>
+    <string name="phase_probing">Sondagem</string>
+    <string name="phase_planning">Planejamento</string>
+    <string name="phase_teaching">Ensino</string>
+    <string name="problem_open">Problema em aberto</string>
+    <string name="problem_concluded">Problema concluído</string>
+    <string name="activity_just_now">agora mesmo</string>
+    <string name="activity_minutes">há %1$d min</string>
+    <string name="activity_hours">há %1$d h</string>
+    <string name="activity_days">há %1$d d</string>
+    <string name="turn_running">Turno em andamento</string>
+    <string name="job_pending">Tarefa pendente</string>
+    <string name="new_session_menu">Nova sessão</string>
+    <string name="close_menu">Fechar menu</string>
+    <string name="new_teaching_session">Nova sessão de ensino</string>
+    <string name="new_practice_session">Nova sessão de prática</string>
+    <string name="empty_sessions_hint">Comece uma sessão de ensino para aprender algo novo, ou uma sessão de prática para usar o que você já sabe.</string>
+    <string name="sessions_no_match">Nenhuma sessão corresponde a “%1$s”</string>
+    <string name="select_session">Selecione uma sessão</string>
+    <string name="delete_session_title">Excluir esta sessão?</string>
+    <string name="delete_session_body">“%1$s” e o histórico dela serão removidos deste aparelho. Não é possível desfazer.</string>
+    <string name="delete">Excluir</string>
+    <string name="cancel">Cancelar</string>
+
+    <!-- New Session -->
+    <string name="new_session_title">Nova sessão</string>
+    <string name="close">Fechar</string>
+    <string name="goal_teaching">O que você quer entender?</string>
+    <string name="goal_practice">O que você quer praticar?</string>
+    <string name="model">Modelo</string>
+    <string name="model_default">%1$s (padrão)</string>
+    <string name="teaching_language">Idioma do ensino</string>
+    <string name="attach">Anexar arquivos ou fotos</string>
+    <string name="remove_attachment">Remover %1$s</string>
+    <string name="start_teaching">Iniciar ensino</string>
+    <string name="start_practice">Iniciar prática</string>
+    <string name="choose_kind">Escolher tipo de sessão</string>
+
+    <!-- Conteúdo fictício do aprendiz para os mockups. -->
+    <string name="fake_goal_crypto">Como a criptografia de chave pública permite que estranhos compartilhem um segredo?</string>
+    <string name="fake_goal_fourier">Por que a transformada de Fourier transforma convolução em multiplicação?</string>
+    <string name="fake_goal_dp">Programação dinâmica em sequências</string>
+    <string name="fake_goal_sorting">O que torna um algoritmo de ordenação estável?</string>
+    <string name="fake_goal_bayes">Teorema de Bayes em exames médicos</string>
+    <string name="fake_goal_vaccines">Como as vacinas treinam o sistema imunológico?</string>
+    <string name="fake_search_hit">transformada</string>
+    <string name="fake_search_miss">quântica</string>
+    <string name="fake_file_pdf">artigo-rsa.pdf</string>
+    <string name="fake_file_photo">quadro.jpg</string>
 </resources>

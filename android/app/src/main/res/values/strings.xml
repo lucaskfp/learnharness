@@ -4,7 +4,90 @@
     <string name="destination_sessions">Sessions</string>
     <string name="destination_graph">Graph</string>
     <string name="destination_settings">Settings</string>
-    <string name="empty_sessions">No sessions yet</string>
+    <string name="empty_sessions">No Sessions yet</string>
     <string name="empty_graph">Your knowledge graph is empty</string>
     <string name="empty_settings">Nothing to configure yet</string>
+
+    <!-- Setup -->
+    <string name="setup_title">Set up LearnHarness</string>
+    <string name="setup_intro">Choose a model provider and paste your API key. Keys are stored encrypted on this device.</string>
+    <string name="setup_provider">Provider</string>
+    <string name="provider_anthropic" translatable="false">Anthropic</string>
+    <string name="provider_openai" translatable="false">OpenAI</string>
+    <string name="provider_gemini" translatable="false">Gemini</string>
+    <string name="provider_custom">Custom</string>
+    <string name="setup_api_key">API key</string>
+    <string name="setup_api_key_optional">API key (optional)</string>
+    <string name="setup_test_key">Test key</string>
+    <string name="setup_key_testing">Testing key…</string>
+    <string name="setup_key_valid">Key works</string>
+    <string name="setup_key_invalid">The provider rejected this key. Check it and try again.</string>
+    <string name="setup_base_url">Base URL</string>
+    <string name="setup_model_name">Model name</string>
+    <string name="setup_models">Default models</string>
+    <string name="setup_models_hint">Used when you start a Session. You can pick another model for each Session.</string>
+    <string name="setup_models_locked">Test your key to load the models.</string>
+    <string name="setup_continue">Continue</string>
+    <string name="role_teaching">Teaching</string>
+    <string name="role_practice">Practice</string>
+    <string name="role_jobs">Background Jobs</string>
+
+    <!-- Sessions -->
+    <string name="sessions_search">Search Sessions</string>
+    <string name="filter_all">All</string>
+    <string name="filter_teaching">Teaching</string>
+    <string name="filter_practice">Practice</string>
+    <string name="kind_teaching">Teaching Session</string>
+    <string name="kind_practice">Practice Session</string>
+    <string name="phase_probing">Probing</string>
+    <string name="phase_planning">Planning</string>
+    <string name="phase_teaching">Teaching</string>
+    <string name="problem_open">Problem open</string>
+    <string name="problem_concluded">Problem concluded</string>
+    <string name="activity_just_now">just now</string>
+    <string name="activity_minutes">%1$dm ago</string>
+    <string name="activity_hours">%1$dh ago</string>
+    <string name="activity_days">%1$dd ago</string>
+    <string name="session_meta" translatable="false">%1$s · %2$s</string>
+    <string name="turn_running">Turn running</string>
+    <string name="job_pending">Job pending</string>
+    <string name="new_session_menu">New Session</string>
+    <string name="close_menu">Close menu</string>
+    <string name="new_teaching_session">New Teaching Session</string>
+    <string name="new_practice_session">New Practice Session</string>
+    <string name="empty_sessions_hint">Start a Teaching Session to learn something new, or a Practice Session to use what you know.</string>
+    <string name="sessions_no_match">No Sessions match “%1$s”</string>
+    <string name="select_session">Select a Session</string>
+    <string name="delete_session_title">Delete this Session?</string>
+    <string name="delete_session_body">“%1$s” and its history will be removed from this device. This can’t be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- New Session -->
+    <string name="new_session_title">New Session</string>
+    <string name="close">Close</string>
+    <string name="goal_teaching">What do you want to understand?</string>
+    <string name="goal_practice">What do you want to practice?</string>
+    <string name="model">Model</string>
+    <string name="model_default">%1$s (default)</string>
+    <string name="teaching_language">Teaching language</string>
+    <string name="language_en" translatable="false">English</string>
+    <string name="language_pt_br" translatable="false">Português (Brasil)</string>
+    <string name="attach">Attach files or photos</string>
+    <string name="remove_attachment">Remove %1$s</string>
+    <string name="start_teaching">Start teaching</string>
+    <string name="start_practice">Start practice</string>
+    <string name="choose_kind">Choose Session kind</string>
+
+    <!-- Fake learner content for the mockups. Not UI text: it stands in for what a learner types. -->
+    <string name="fake_goal_crypto">How does public-key cryptography let strangers share a secret?</string>
+    <string name="fake_goal_fourier">Why does the Fourier transform turn convolution into multiplication?</string>
+    <string name="fake_goal_dp">Dynamic programming on sequences</string>
+    <string name="fake_goal_sorting">What makes a sorting algorithm stable?</string>
+    <string name="fake_goal_bayes">Bayes’ theorem in medical tests</string>
+    <string name="fake_goal_vaccines">How do vaccines train the immune system?</string>
+    <string name="fake_search_hit">transform</string>
+    <string name="fake_search_miss">quantum</string>
+    <string name="fake_file_pdf">rsa-paper.pdf</string>
+    <string name="fake_file_photo">whiteboard.jpg</string>
 </resources>
