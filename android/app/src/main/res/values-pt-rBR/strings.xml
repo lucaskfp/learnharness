@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="destination_sessions">Sessões</string>
+    <string name="destination_graph">Grafo</string>
+    <string name="destination_settings">Configurações</string>
+    <string name="empty_sessions">Nenhuma sessão ainda</string>
+    <string name="empty_graph">Seu grafo de conhecimento está vazio</string>
+    <string name="empty_settings">Nada para configurar ainda</string>
+</resources>

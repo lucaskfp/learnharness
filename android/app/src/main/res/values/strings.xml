@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">LearnHarness</string>
+    <string name="destination_sessions">Sessions</string>
+    <string name="destination_graph">Graph</string>
+    <string name="destination_settings">Settings</string>
+    <string name="empty_sessions">No sessions yet</string>
+    <string name="empty_graph">Your knowledge graph is empty</string>
+    <string name="empty_settings">Nothing to configure yet</string>
+</resources>

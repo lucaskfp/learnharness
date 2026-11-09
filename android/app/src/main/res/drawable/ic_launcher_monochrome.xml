@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LearnHarness mark, derived from build/icon-flat.svg (1024 viewport). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <group
+        android:pivotX="512"
+        android:pivotY="512"
+        android:scaleX="0.72"
+        android:scaleY="0.72">
+        <path
+            android:pathData="M575.97,211.06 A307.66,307.66 0 1,0 812.94,448.03"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="46.31" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M538.78,297.11 a188.11,188.11 0 1,0 376.22,0 a188.11,188.11 0 1,0 -376.22,0 Z M584.61,297.11 a142.28,142.28 0 1,0 284.56,0 a142.28,142.28 0 1,0 -284.56,0 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M109.00,726.89 a188.11,188.11 0 1,0 376.22,0 a188.11,188.11 0 1,0 -376.22,0 Z" />
+    </group>
+</vector>
