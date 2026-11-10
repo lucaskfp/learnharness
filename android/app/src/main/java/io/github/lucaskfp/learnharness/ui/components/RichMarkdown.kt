@@ -39,12 +39,12 @@ import ru.noties.jlatexmath.JLatexMathDrawable
 import kotlin.math.abs
 
 /**
- * Agent prose: GitHub-flavored Markdown, with ```math fences drawn as LaTeX and ```mermaid
- * fences drawn by [MermaidStandIn]. Parsed synchronously so previews and screenshots show it.
+ * Agent prose: GitHub-flavored Markdown, with display math (```math fences or `$$…$$`) drawn as
+ * LaTeX and ```mermaid fences drawn by [MermaidStandIn]. Parsed synchronously so previews and screenshots show it.
  */
 @Composable
 fun RichMarkdown(markdown: String, modifier: Modifier = Modifier) {
-    val state = rememberMarkdownState(markdown, immediate = true)
+    val state = rememberMarkdownState(fenceDisplayMath(markdown), immediate = true)
     Markdown(
         markdownState = state,
         modifier = modifier.fillMaxWidth(),
@@ -61,6 +61,12 @@ fun RichMarkdown(markdown: String, modifier: Modifier = Modifier) {
         ),
     )
 }
+
+private val DisplayMath = Regex("""\$\$([\s\S]+?)\$\$""")
+
+/** Rewrites `$$…$$` display math as a ```math fence, the one form the renderer draws as LaTeX. */
+fun fenceDisplayMath(markdown: String): String =
+    DisplayMath.replace(markdown) { "```math\n${it.groupValues[1].trim()}\n```" }
 
 /** A display formula drawn with JLatexMath, centered and scrollable when wider than the column. */
 @Composable

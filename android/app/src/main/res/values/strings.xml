@@ -116,6 +116,7 @@
     <string name="job_done">Done</string>
     <string name="abort_job">Abort</string>
     <string name="open_demo">Open demo</string>
+    <string name="find_in_session">Find in Session</string>
     <string name="send">Send</string>
     <string name="stop_turn">Stop the Turn</string>
     <string name="composer_hint">Ask, answer, or steer the lesson…</string>

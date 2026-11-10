@@ -36,7 +36,7 @@ data class PendingQuestion(
     val kind: QuestionKind,
     val text: String,
     val options: List<QuestionOption> = emptyList(),
-    /** Index into [ConfidenceStops]. */
+    /** Index into [ConfidenceStops]. Unused by free recall, which asks for no confidence. */
     val confidenceIndex: Int = DefaultConfidenceIndex,
     /** The learner picked "I don't know" instead of an option. */
     val dontKnow: Boolean = false,

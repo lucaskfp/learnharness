@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -36,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
@@ -68,6 +72,7 @@ fun TeachingSessionScreen(
     // Composer
     onComposerTextChange: (String) -> Unit = {},
     onAttach: () -> Unit = {},
+    onFind: () -> Unit = {},
     onSend: () -> Unit = {},
     onStopTurn: () -> Unit = {},
     // Dictation, into the thinking field or the composer, whichever is showing
@@ -77,7 +82,7 @@ fun TeachingSessionScreen(
     val planBeside = wide && state.plan != null
     Scaffold(
         modifier = modifier,
-        topBar = { SessionTopBar(state, showPlanAction = state.plan != null && !planBeside, onBack, onOpenPlan) },
+        topBar = { SessionTopBar(state, showPlanAction = state.plan != null && !planBeside, onBack, onOpenPlan, onFind) },
         // The dock and the composer pad themselves above the navigation bar.
         contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
     ) { padding ->
@@ -135,6 +140,7 @@ private fun SessionTopBar(
     showPlanAction: Boolean,
     onBack: () -> Unit,
     onOpenPlan: () -> Unit,
+    onFind: () -> Unit,
 ) {
     TopAppBar(
         navigationIcon = {
@@ -159,6 +165,16 @@ private fun SessionTopBar(
             }
         },
         actions = {
+            // The running Turn stays visible however far the learner scrolls back.
+            if (state.turnRunning) {
+                val description = stringResource(R.string.turn_running)
+                LoadingIndicator(Modifier.size(32.dp).semantics { contentDescription = description })
+            }
+            // Find sits here rather than in the composer's toolbar: there, at large font scales,
+            // it squeezes the message field until its hint breaks mid-word.
+            IconButton(onClick = onFind) {
+                Icon(painterResource(R.drawable.ic_search), contentDescription = stringResource(R.string.find_in_session))
+            }
             if (showPlanAction) {
                 IconButton(onClick = onOpenPlan) {
                     Icon(painterResource(R.drawable.ic_plan), contentDescription = stringResource(R.string.open_plan))

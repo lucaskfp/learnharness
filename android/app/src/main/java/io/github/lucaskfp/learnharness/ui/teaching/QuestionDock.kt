@@ -136,6 +136,8 @@ private fun ExpandedDock(question: PendingQuestion, deepThinking: Boolean, event
         KindTag(question)
         Text(question.text, style = MaterialTheme.typography.titleMedium)
         if (question.kind.freeRecall) {
+            // As on desktop, free recall carries no confidence: the answer in the learner's own
+            // words is the evidence.
             OutlinedTextField(
                 value = question.answer,
                 onValueChange = onAnswerChange,

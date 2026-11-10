@@ -109,6 +109,7 @@
     <string name="job_done">Concluída</string>
     <string name="abort_job">Interromper</string>
     <string name="open_demo">Abrir demonstração</string>
+    <string name="find_in_session">Buscar na sessão</string>
     <string name="send">Enviar</string>
     <string name="stop_turn">Parar o turno</string>
     <string name="composer_hint">Pergunte, responda ou conduza a aula…</string>

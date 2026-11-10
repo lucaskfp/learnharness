@@ -203,7 +203,9 @@ private fun PlanBlock(plan: Plan, onOpenPlan: () -> Unit, modifier: Modifier = M
 private fun ImageCard(item: TranscriptItem.ImageCard, modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
     val labelStyle = MaterialTheme.typography.labelLarge
-    val accent = MaterialTheme.colorScheme.error
+    // Labels sit on the learner's photo, not on the theme: brand ink with white text reads on
+    // either theme. (Error would read as a fault.)
+    val accent = AnnotationInk
     val description = item.annotations.joinToString { it.label }
     // A photo at full tablet width would push its caption off screen.
     Card(modifier.widthIn(max = 560.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
@@ -219,7 +221,8 @@ private fun ImageCard(item: TranscriptItem.ImageCard, modifier: Modifier = Modif
                 val text = measurer.measure(annotation.label, labelStyle.copy(color = Color.White), maxLines = 1)
                 val labelTopLeft = Offset(
                     (target.x - text.size.width / 2f).coerceIn(8f, size.width - text.size.width - 24f),
-                    if (target.y > size.height / 2) target.y - 72.dp.toPx() else target.y + 40.dp.toPx(),
+                    // Upper-half labels go above their point, lower-half ones below, so they never meet.
+                    if (target.y < size.height / 2) target.y - 32.dp.toPx() - text.size.height else target.y + 32.dp.toPx(),
                 )
                 val padding = 8.dp.toPx()
                 val labelCenter = Offset(labelTopLeft.x + text.size.width / 2f, labelTopLeft.y + text.size.height / 2f)
@@ -243,7 +246,12 @@ private fun ImageCard(item: TranscriptItem.ImageCard, modifier: Modifier = Modif
     }
 }
 
-/** A stand-in for the learner's photo of a whiteboard sketch: two boxes and a shared line. */
+private val AnnotationInk = Color(0xFF141414)
+
+/**
+ * A stand-in for the learner's photo of a whiteboard sketch: two boxes and a shared line. Its
+ * colors are a photo's, not the theme's (README: Feedback colors).
+ */
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWhiteboardPhoto() {
     drawRect(Color(0xFFE9E7E1))
     val marker = Color(0xFF2B4C8C)
