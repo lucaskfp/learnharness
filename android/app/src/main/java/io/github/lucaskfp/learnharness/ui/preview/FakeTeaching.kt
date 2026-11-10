@@ -194,11 +194,13 @@ object FakeTeaching {
         ),
     )
 
-    /** Graded checks (correct, incorrect) above a pending check with an option selected. */
+    /**
+     * Two graded checks: one answered correctly, one answered incorrectly with the correct option
+     * marked as missed. The selected state shows in the Probe and Prediction docks.
+     */
     @Composable
     fun teachQuizGraded() = teach(
         transcript = listOf(
-            explanation(),
             TranscriptItem.AnsweredQuestion(
                 kind = QuestionKind.Check,
                 text = stringResource(R.string.fake_t_check2_question),
@@ -219,19 +221,6 @@ object FakeTeaching {
                 confidence = 30,
                 thinking = stringResource(R.string.fake_t_check_thinking),
             ),
-        ),
-        question = PendingQuestion(
-            kind = QuestionKind.Check,
-            text = stringResource(R.string.fake_t_check_question),
-            options = listOf(
-                QuestionOption(stringResource(R.string.fake_t_check_a)),
-                QuestionOption(stringResource(R.string.fake_t_check_b), OptionState.Selected),
-                QuestionOption(stringResource(R.string.fake_t_check_c)),
-            ),
-            confidenceIndex = 4,
-            thinking = stringResource(R.string.fake_t_check_thinking),
-            position = 2,
-            count = 2,
         ),
     )
 

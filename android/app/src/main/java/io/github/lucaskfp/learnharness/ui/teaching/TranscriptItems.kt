@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -58,16 +59,23 @@ import kotlin.math.sin
 
 /** One transcript entry. */
 @Composable
-fun TranscriptEntry(item: TranscriptItem, modifier: Modifier = Modifier, onOpenPlan: () -> Unit = {}) {
+fun TranscriptEntry(
+    item: TranscriptItem,
+    modifier: Modifier = Modifier,
+    onOpenPlan: () -> Unit = {},
+    onToggleReasoning: (TranscriptItem.Reasoning) -> Unit = {},
+    onAbortJob: (TranscriptItem.JobCard) -> Unit = {},
+    onOpenDemo: (TranscriptItem.JobCard) -> Unit = {},
+) {
     when (item) {
         is TranscriptItem.LearnerMessage -> LearnerMessage(item.text, modifier)
         is TranscriptItem.AgentProse -> RichMarkdown(item.markdown, modifier)
-        is TranscriptItem.Reasoning -> ReasoningBlock(item, modifier)
+        is TranscriptItem.Reasoning -> ReasoningBlock(item, onToggle = { onToggleReasoning(item) }, modifier)
         is TranscriptItem.AnsweredQuestion -> AnsweredCard(item, modifier)
         is TranscriptItem.PhaseBoundary -> PhaseBoundary(item, modifier)
         is TranscriptItem.PlanSnapshot -> PlanBlock(item.plan, onOpenPlan, modifier)
         is TranscriptItem.ImageCard -> ImageCard(item, modifier)
-        is TranscriptItem.JobCard -> JobCard(item, modifier)
+        is TranscriptItem.JobCard -> JobCard(item, onAbort = { onAbortJob(item) }, onOpenDemo = { onOpenDemo(item) }, modifier)
     }
 }
 
@@ -102,9 +110,9 @@ private fun LearnerThinking(text: String) {
 }
 
 @Composable
-private fun ReasoningBlock(item: TranscriptItem.Reasoning, modifier: Modifier = Modifier) {
+private fun ReasoningBlock(item: TranscriptItem.Reasoning, onToggle: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth()) {
-        TextButton(onClick = {}, contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
+        TextButton(onClick = onToggle, contentPadding = ButtonDefaults.TextButtonWithIconContentPadding) {
             Text(stringResource(R.string.reasoning), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Icon(
                 painterResource(R.drawable.ic_arrow_down),
@@ -137,7 +145,7 @@ private fun AnsweredCard(item: TranscriptItem.AnsweredQuestion, modifier: Modifi
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(item.text, style = MaterialTheme.typography.titleSmall)
-            item.options.forEach { QuizOption(it, onClick = {}) }
+            item.options.forEach { AnsweredOption(it) }
             if (item.answer.isNotEmpty()) Text("“${item.answer}”", style = MaterialTheme.typography.bodyLarge)
             item.confidence?.let { ConfidenceRail(it, Modifier.fillMaxWidth()) }
             if (item.thinking.isNotEmpty()) LearnerThinking(item.thinking)
@@ -221,7 +229,7 @@ private fun ImageCard(item: TranscriptItem.ImageCard, modifier: Modifier = Modif
                     accent,
                     topLeft = labelTopLeft - Offset(padding, padding / 2),
                     size = Size(text.size.width + padding * 2, text.size.height + padding),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
+                    cornerRadius = CornerRadius(8.dp.toPx()),
                 )
                 drawText(text, topLeft = labelTopLeft)
             }
@@ -249,7 +257,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWhiteboardPhoto
 }
 
 @Composable
-private fun JobCard(item: TranscriptItem.JobCard, modifier: Modifier = Modifier) {
+private fun JobCard(item: TranscriptItem.JobCard, onAbort: () -> Unit, onOpenDemo: () -> Unit, modifier: Modifier = Modifier) {
     Card(modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -269,12 +277,12 @@ private fun JobCard(item: TranscriptItem.JobCard, modifier: Modifier = Modifier)
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = {}) { Text(stringResource(R.string.abort_job)) }
+                        TextButton(onClick = onAbort) { Text(stringResource(R.string.abort_job)) }
                     }
                 }
                 JobStatus.Done -> when (item.kind) {
                     JobKind.Visual -> ModularClockVisual(Modifier.fillMaxWidth().aspectRatio(1.6f))
-                    JobKind.Demo -> OutlinedButton(onClick = {}) {
+                    JobKind.Demo -> OutlinedButton(onClick = onOpenDemo) {
                         Icon(painterResource(R.drawable.ic_open_in_full), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         Text(stringResource(R.string.open_demo), modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
                     }

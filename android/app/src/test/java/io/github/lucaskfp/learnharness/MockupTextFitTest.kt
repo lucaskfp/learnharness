@@ -52,7 +52,7 @@ class MockupTextFitTest(private val mockup: Mockup, private val fontScale: Float
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0} @ {1}x")
-        fun parameters() = atBothScales(setupMockups + sessionsMockups + newSessionMockups + teachingMockups + teachMockups)
+        fun parameters() = atBothScales(setupMockups + sessionsMockups + newSessionMockups + probeAndPlanMockups + teachMockups)
     }
 }
 
@@ -102,7 +102,7 @@ private val newSessionMockups = listOf(
     Mockup("new-session-kind-menu") { NewSessionScreen(FakeNewSession.kindMenuOpen()) },
 )
 
-private val teachingMockups = listOf(
+private val probeAndPlanMockups = listOf(
     Mockup("probe-multiple-choice") { TeachingSessionScreen(FakeTeaching.probeMultipleChoice()) },
     Mockup("probe-recall") { TeachingSessionScreen(FakeTeaching.probeRecall()) },
     Mockup("probe-collapsed") { TeachingSessionScreen(FakeTeaching.probeCollapsed()) },

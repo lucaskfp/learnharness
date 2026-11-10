@@ -53,6 +53,25 @@ fun TeachingSessionScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onOpenPlan: () -> Unit = {},
+    // Transcript
+    onToggleReasoning: (TranscriptItem.Reasoning) -> Unit = {},
+    onAbortJob: (TranscriptItem.JobCard) -> Unit = {},
+    onOpenDemo: (TranscriptItem.JobCard) -> Unit = {},
+    // Question dock
+    onExpandQuestion: () -> Unit = {},
+    onSelectOption: (Int) -> Unit = {},
+    onDontKnow: () -> Unit = {},
+    onConfidenceChange: (Int) -> Unit = {},
+    onAnswerChange: (String) -> Unit = {},
+    onThinkingChange: (String) -> Unit = {},
+    onSubmitAnswer: () -> Unit = {},
+    // Composer
+    onComposerTextChange: (String) -> Unit = {},
+    onAttach: () -> Unit = {},
+    onSend: () -> Unit = {},
+    onStopTurn: () -> Unit = {},
+    // Dictation, into the thinking field or the composer, whichever is showing
+    onDictate: () -> Unit = {},
 ) {
     val wide = currentWindowAdaptiveInfoV2().windowSizeClass.isWidthAtLeastBreakpoint(WIDTH_DP_EXPANDED_LOWER_BOUND)
     val planBeside = wide && state.plan != null
@@ -65,12 +84,39 @@ fun TeachingSessionScreen(
         Row(Modifier.fillMaxSize().padding(padding)) {
             // The lesson column owns the dock and composer, so a Plan beside it runs full height.
             Column(Modifier.weight(1f)) {
-                Transcript(state, onOpenPlan, Modifier.weight(1f))
+                Transcript(state, Modifier.weight(1f)) { item ->
+                    TranscriptEntry(
+                        item,
+                        onOpenPlan = onOpenPlan,
+                        onToggleReasoning = onToggleReasoning,
+                        onAbortJob = onAbortJob,
+                        onOpenDemo = onOpenDemo,
+                    )
+                }
                 val question = state.question
                 if (question != null) {
-                    QuestionDock(question, deepThinking = state.phase == SessionPhase.Teaching)
+                    QuestionDock(
+                        question,
+                        deepThinking = state.phase == SessionPhase.Teaching,
+                        onExpand = onExpandQuestion,
+                        onSelect = onSelectOption,
+                        onDontKnow = onDontKnow,
+                        onConfidenceChange = onConfidenceChange,
+                        onAnswerChange = onAnswerChange,
+                        onThinkingChange = onThinkingChange,
+                        onDictate = onDictate,
+                        onSubmit = onSubmitAnswer,
+                    )
                 } else {
-                    Composer(state.composerText, state.turnRunning)
+                    Composer(
+                        state.composerText,
+                        state.turnRunning,
+                        onTextChange = onComposerTextChange,
+                        onAttach = onAttach,
+                        onDictate = onDictate,
+                        onSend = onSend,
+                        onStop = onStopTurn,
+                    )
                 }
             }
             if (planBeside) {
@@ -123,7 +169,11 @@ private fun SessionTopBar(
 }
 
 @Composable
-private fun Transcript(state: TeachingSessionState, onOpenPlan: () -> Unit, modifier: Modifier = Modifier) {
+private fun Transcript(
+    state: TeachingSessionState,
+    modifier: Modifier = Modifier,
+    entry: @Composable (TranscriptItem) -> Unit,
+) {
     val entries = state.transcript.size + if (state.turnRunning) 1 else 0
     LazyColumn(
         // Opens at the latest entry, just above the dock or composer.
@@ -132,7 +182,7 @@ private fun Transcript(state: TeachingSessionState, onOpenPlan: () -> Unit, modi
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        items(state.transcript) { item -> TranscriptEntry(item, onOpenPlan = onOpenPlan) }
+        items(state.transcript) { item -> entry(item) }
         if (state.turnRunning) {
             item { RunningTurnIndicator() }
         }

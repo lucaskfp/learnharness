@@ -3,7 +3,7 @@ package io.github.lucaskfp.learnharness.ui.teaching
 /** A dependency in the Plan: [from] must be understood before [to]. */
 data class PlanEdge(val from: String, val to: String)
 
-/** Where a Plan node sits: its [layer] (left to right) and its [slot] within that layer. */
+/** Where a Plan node sits: its [layer] (top to bottom) and its [slot] within that layer (left to right). */
 data class PlanCell(val layer: Int, val slot: Int)
 
 /**

@@ -2,6 +2,7 @@
 
 package io.github.lucaskfp.learnharness.ui.teaching
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,7 @@ fun QuestionDock(
     modifier: Modifier = Modifier,
     onExpand: () -> Unit = {},
     onSelect: (Int) -> Unit = {},
+    onDontKnow: () -> Unit = {},
     onConfidenceChange: (Int) -> Unit = {},
     onAnswerChange: (String) -> Unit = {},
     onThinkingChange: (String) -> Unit = {},
@@ -73,7 +75,9 @@ fun QuestionDock(
             CollapsedBar(question, onExpand)
         } else {
             ExpandedDock(
-                question, deepThinking, onSelect, onConfidenceChange, onAnswerChange, onThinkingChange, onDictate, onSubmit,
+                question,
+                deepThinking,
+                QuestionDockEvents(onSelect, onDontKnow, onConfidenceChange, onAnswerChange, onThinkingChange, onDictate, onSubmit),
             )
         }
     }
@@ -107,17 +111,18 @@ private fun CollapsedBar(question: PendingQuestion, onExpand: () -> Unit) {
     }
 }
 
+private class QuestionDockEvents(
+    val onSelect: (Int) -> Unit,
+    val onDontKnow: () -> Unit,
+    val onConfidenceChange: (Int) -> Unit,
+    val onAnswerChange: (String) -> Unit,
+    val onThinkingChange: (String) -> Unit,
+    val onDictate: () -> Unit,
+    val onSubmit: () -> Unit,
+)
+
 @Composable
-private fun ExpandedDock(
-    question: PendingQuestion,
-    deepThinking: Boolean,
-    onSelect: (Int) -> Unit,
-    onConfidenceChange: (Int) -> Unit,
-    onAnswerChange: (String) -> Unit,
-    onThinkingChange: (String) -> Unit,
-    onDictate: () -> Unit,
-    onSubmit: () -> Unit,
-) {
+private fun ExpandedDock(question: PendingQuestion, deepThinking: Boolean, events: QuestionDockEvents): Unit = with(events) {
     // The dock never takes the whole screen: the lesson above stays in view.
     val maxHeight = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.height * 0.7f).toDp() }
     Column(
@@ -144,8 +149,11 @@ private fun ExpandedDock(
                     QuizOption(option, onClick = { onSelect(i) })
                 }
                 QuizOption(
-                    QuestionOption(stringResource(R.string.i_dont_know)),
-                    onClick = { onSelect(question.options.size) },
+                    QuestionOption(
+                        stringResource(R.string.i_dont_know),
+                        if (question.dontKnow) OptionState.Selected else OptionState.Idle,
+                    ),
+                    onClick = onDontKnow,
                 )
             }
             ConfidenceSlider(question.confidenceIndex, onConfidenceChange)
@@ -190,74 +198,113 @@ private fun KindTag(question: PendingQuestion) {
     }
 }
 
+/** How an option looks in each [OptionState]: one place, shared by the dock and answered cards. */
+private class OptionStyle(
+    val checked: Boolean,
+    val container: Color,
+    val content: Color,
+    val border: BorderStroke?,
+    @DrawableRes val icon: Int?,
+    val iconTint: Color,
+    val stateLabel: String?,
+)
+
+@Composable
+private fun optionStyle(state: OptionState): OptionStyle {
+    val colors = MaterialTheme.colorScheme
+    val correct = correctColor
+    return when (state) {
+        OptionState.Idle -> OptionStyle(
+            checked = false, container = colors.surfaceContainerHighest, content = colors.onSurface,
+            border = null, icon = null, iconTint = colors.onSurface, stateLabel = null,
+        )
+        OptionState.Selected -> OptionStyle(
+            checked = true, container = colors.primary, content = colors.onPrimary,
+            border = null, icon = R.drawable.ic_check_circle, iconTint = colors.onPrimary,
+            stateLabel = stringResource(R.string.option_selected),
+        )
+        OptionState.Correct -> OptionStyle(
+            checked = true, container = correct.copy(alpha = 0.18f).compositeOver(colors.surfaceContainer), content = correct,
+            border = BorderStroke(1.5.dp, correct), icon = R.drawable.ic_check, iconTint = correct,
+            stateLabel = stringResource(R.string.option_correct),
+        )
+        OptionState.Incorrect -> OptionStyle(
+            checked = true, container = colors.errorContainer, content = colors.onErrorContainer,
+            border = BorderStroke(1.5.dp, colors.error), icon = R.drawable.ic_close, iconTint = colors.error,
+            stateLabel = stringResource(R.string.option_incorrect),
+        )
+        OptionState.MissedCorrect -> OptionStyle(
+            checked = false, container = colors.surfaceContainerHighest, content = colors.onSurface,
+            border = BorderStroke(1.5.dp, correct), icon = R.drawable.ic_check, iconTint = correct,
+            stateLabel = stringResource(R.string.option_missed_correct),
+        )
+    }
+}
+
+// Expressive shape morph: round at rest, square once picked, squarer still while pressed.
+private val OptionShape = RoundedCornerShape(24.dp)
+private val OptionCheckedShape = RoundedCornerShape(10.dp)
+private val OptionPressedShape = RoundedCornerShape(6.dp)
+private val OptionPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+
 /**
- * One answer option, an Expressive toggle button: round at rest, it morphs square when picked.
- * After grading it keeps its picked shape and turns green (correct) or error (incorrect); a
- * correct option the learner missed stays round with a green outline.
+ * One answer option in the dock, an Expressive toggle button: round at rest, it morphs square
+ * when picked.
  */
 @Composable
 fun QuizOption(option: QuestionOption, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.colorScheme
-    val correct = correctColor
-    val checked = option.state in setOf(OptionState.Selected, OptionState.Correct, OptionState.Incorrect)
-    val (container, content) = when (option.state) {
-        OptionState.Idle, OptionState.MissedCorrect -> colors.surfaceContainerHighest to colors.onSurface
-        OptionState.Selected -> colors.primary to colors.onPrimary
-        OptionState.Correct -> correct.copy(alpha = 0.18f).compositeOver(colors.surfaceContainer) to correct
-        OptionState.Incorrect -> colors.errorContainer to colors.onErrorContainer
-    }
-    val border = when (option.state) {
-        OptionState.Correct, OptionState.MissedCorrect -> BorderStroke(1.5.dp, correct)
-        OptionState.Incorrect -> BorderStroke(1.5.dp, colors.error)
-        else -> null
-    }
-    val icon = when (option.state) {
-        OptionState.Selected -> R.drawable.ic_check_circle
-        OptionState.Correct, OptionState.MissedCorrect -> R.drawable.ic_check
-        OptionState.Incorrect -> R.drawable.ic_close
-        OptionState.Idle -> null
-    }
-    val iconTint = when (option.state) {
-        OptionState.MissedCorrect -> correct
-        OptionState.Incorrect -> colors.error
-        else -> Color.Unspecified
-    }
-    val stateLabel = when (option.state) {
-        OptionState.Idle -> null
-        OptionState.Selected -> stringResource(R.string.option_selected)
-        OptionState.Correct -> stringResource(R.string.option_correct)
-        OptionState.Incorrect -> stringResource(R.string.option_incorrect)
-        OptionState.MissedCorrect -> stringResource(R.string.option_missed_correct)
-    }
+    val style = optionStyle(option.state)
     ToggleButton(
-        checked = checked,
+        checked = style.checked,
         onCheckedChange = { onClick() },
-        shapes = ToggleButtonShapes(
-            shape = RoundedCornerShape(24.dp),
-            pressedShape = RoundedCornerShape(6.dp),
-            checkedShape = RoundedCornerShape(10.dp),
-        ),
+        shapes = ToggleButtonShapes(shape = OptionShape, pressedShape = OptionPressedShape, checkedShape = OptionCheckedShape),
         colors = ToggleButtonDefaults.colors(
-            containerColor = container,
-            contentColor = content,
-            checkedContainerColor = container,
-            checkedContentColor = content,
+            containerColor = style.container,
+            contentColor = style.content,
+            checkedContainerColor = style.container,
+            checkedContentColor = style.content,
         ),
-        border = border,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        border = style.border,
+        contentPadding = OptionPadding,
         modifier = modifier
             .fillMaxWidth()
-            .semantics { if (stateLabel != null) stateDescription = stateLabel },
+            .semantics { style.stateLabel?.let { stateDescription = it } },
     ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(option.text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            if (icon != null) {
-                Icon(painterResource(icon), contentDescription = null, tint = if (iconTint == Color.Unspecified) content else iconTint, modifier = Modifier.size(20.dp))
-            }
+        OptionContent(option.text, style, Modifier.weight(1f))
+    }
+}
+
+/**
+ * A graded option in an answered card: the toggle's end state, read only. A picked option keeps
+ * its square shape and turns green (correct) or error (incorrect); a correct option the learner
+ * missed stays round with a green outline.
+ */
+@Composable
+fun AnsweredOption(option: QuestionOption, modifier: Modifier = Modifier) {
+    val style = optionStyle(option.state)
+    Surface(
+        shape = if (style.checked) OptionCheckedShape else OptionShape,
+        color = style.container,
+        contentColor = style.content,
+        border = style.border,
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { style.stateLabel?.let { stateDescription = it } },
+    ) {
+        Row(Modifier.padding(OptionPadding)) { OptionContent(option.text, style, Modifier.weight(1f)) }
+    }
+}
+
+@Composable
+private fun OptionContent(text: String, style: OptionStyle, modifier: Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        style.icon?.let {
+            Icon(painterResource(it), contentDescription = null, tint = style.iconTint, modifier = Modifier.size(20.dp))
         }
     }
 }

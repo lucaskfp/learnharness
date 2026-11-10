@@ -24,12 +24,12 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.lucaskfp.learnharness.R
-import io.github.lucaskfp.learnharness.ui.theme.ConfidenceRamp
+import io.github.lucaskfp.learnharness.ui.theme.confidenceColor
 
 /** How sure the learner is of an answer: a slider over [ConfidenceStops], colored by the ramp. */
 @Composable
 fun ConfidenceSlider(index: Int, onIndexChange: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val color = ConfidenceRamp[index]
+    val color = confidenceColor(ConfidenceStops[index])
     val percent = stringResource(R.string.confidence_percent, ConfidenceStops[index])
     Column(modifier) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -52,10 +52,9 @@ fun ConfidenceSlider(index: Int, onIndexChange: (Int) -> Unit, modifier: Modifie
     }
 }
 
-/** The answered card's record of a confidence: the slider's rail, without a thumb. */
+/** The answered card's record of a [confidence] in percent: the slider's rail, without a thumb. */
 @Composable
 fun ConfidenceRail(confidence: Int, modifier: Modifier = Modifier) {
-    val index = ConfidenceStops.indexOf(confidence).takeIf { it >= 0 } ?: 2
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(
             Modifier
@@ -69,7 +68,7 @@ fun ConfidenceRail(confidence: Int, modifier: Modifier = Modifier) {
                     .fillMaxWidth(confidence / 100f)
                     .height(6.dp)
                     .clip(CircleShape)
-                    .background(ConfidenceRamp[index]),
+                    .background(confidenceColor(confidence)),
             )
         }
         Text(

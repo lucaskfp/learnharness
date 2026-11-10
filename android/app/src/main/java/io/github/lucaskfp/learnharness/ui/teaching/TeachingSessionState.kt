@@ -25,8 +25,11 @@ enum class OptionState { Idle, Selected, Correct, Incorrect, MissedCorrect }
 
 data class QuestionOption(val text: String, val state: OptionState = OptionState.Idle)
 
-/** Confidence stops, as on desktop (`CONFIDENCE_STOPS`); the slider moves between them. */
+/** Confidence stops in percent, as on desktop (`CONFIDENCE_STOPS`); the slider moves between them. */
 val ConfidenceStops = listOf(0, 30, 50, 70, 90, 100)
+
+/** The slider starts at 50%, as on desktop (`DEFAULT_CONFIDENCE_INDEX`). */
+val DefaultConfidenceIndex = ConfidenceStops.indexOf(50)
 
 /** The question waiting for the learner, shown in the dock in place of the composer. */
 data class PendingQuestion(
@@ -34,7 +37,9 @@ data class PendingQuestion(
     val text: String,
     val options: List<QuestionOption> = emptyList(),
     /** Index into [ConfidenceStops]. */
-    val confidenceIndex: Int = 2,
+    val confidenceIndex: Int = DefaultConfidenceIndex,
+    /** The learner picked "I don't know" instead of an option. */
+    val dontKnow: Boolean = false,
     val answer: String = "",
     val thinking: String = "",
     /** 1-based position among the questions waiting, and how many wait. */
@@ -85,6 +90,7 @@ sealed interface TranscriptItem {
         val text: String,
         val options: List<QuestionOption> = emptyList(),
         val answer: String = "",
+        /** Confidence in percent, one of [ConfidenceStops]. */
         val confidence: Int? = null,
         val thinking: String = "",
     ) : TranscriptItem
