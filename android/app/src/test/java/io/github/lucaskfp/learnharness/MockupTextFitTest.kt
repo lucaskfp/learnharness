@@ -17,8 +17,11 @@ import io.github.lucaskfp.learnharness.ui.newsession.NewSessionScreen
 import io.github.lucaskfp.learnharness.ui.preview.FakeNewSession
 import io.github.lucaskfp.learnharness.ui.preview.FakeSessions
 import io.github.lucaskfp.learnharness.ui.preview.FakeSetup
+import io.github.lucaskfp.learnharness.ui.preview.FakeTeaching
 import io.github.lucaskfp.learnharness.ui.sessions.SessionsScreen
 import io.github.lucaskfp.learnharness.ui.setup.SetupScreen
+import io.github.lucaskfp.learnharness.ui.teaching.PlanScreen
+import io.github.lucaskfp.learnharness.ui.teaching.TeachingSessionScreen
 import io.github.lucaskfp.learnharness.ui.theme.LearnHarnessTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -49,7 +52,7 @@ class MockupTextFitTest(private val mockup: Mockup, private val fontScale: Float
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0} @ {1}x")
-        fun parameters() = atBothScales(setupMockups + sessionsMockups + newSessionMockups)
+        fun parameters() = atBothScales(setupMockups + sessionsMockups + newSessionMockups + teachingMockups + teachMockups)
     }
 }
 
@@ -67,7 +70,7 @@ class MockupTextFitTabletTest(private val mockup: Mockup, private val fontScale:
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0} @ {1}x")
-        fun parameters() = atBothScales(sessionsMockups)
+        fun parameters() = atBothScales(sessionsMockups + teachMockups)
     }
 }
 
@@ -97,6 +100,25 @@ private val newSessionMockups = listOf(
     Mockup("new-session-filled") { NewSessionScreen(FakeNewSession.filledTeaching()) },
     Mockup("new-session-practice") { NewSessionScreen(FakeNewSession.practice()) },
     Mockup("new-session-kind-menu") { NewSessionScreen(FakeNewSession.kindMenuOpen()) },
+)
+
+private val teachingMockups = listOf(
+    Mockup("probe-multiple-choice") { TeachingSessionScreen(FakeTeaching.probeMultipleChoice()) },
+    Mockup("probe-recall") { TeachingSessionScreen(FakeTeaching.probeRecall()) },
+    Mockup("probe-collapsed") { TeachingSessionScreen(FakeTeaching.probeCollapsed()) },
+    Mockup("probe-running") { TeachingSessionScreen(FakeTeaching.probeRunning()) },
+    Mockup("plan-in-transcript") { TeachingSessionScreen(FakeTeaching.planInTranscript()) },
+    Mockup("plan-full-screen") { PlanScreen(FakeTeaching.teachingPlan()) },
+)
+
+/** Teach states, which also have a tablet layout (the Plan beside the lesson). */
+private val teachMockups = listOf(
+    Mockup("teach-prediction") { TeachingSessionScreen(FakeTeaching.teachPrediction()) },
+    Mockup("teach-explanation") { TeachingSessionScreen(FakeTeaching.teachExplanation()) },
+    Mockup("teach-quiz-graded") { TeachingSessionScreen(FakeTeaching.teachQuizGraded()) },
+    Mockup("teach-images") { TeachingSessionScreen(FakeTeaching.teachImages()) },
+    Mockup("teach-jobs") { TeachingSessionScreen(FakeTeaching.teachJobs()) },
+    Mockup("teach-running") { TeachingSessionScreen(FakeTeaching.teachRunning()) },
 )
 
 private fun atBothScales(mockups: List<Mockup>): List<Array<Any>> =

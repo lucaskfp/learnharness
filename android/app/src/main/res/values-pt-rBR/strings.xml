@@ -72,6 +72,48 @@
     <string name="start_practice">Iniciar prática</string>
     <string name="choose_kind">Escolher tipo de sessão</string>
 
+    <!-- Sessão de ensino -->
+    <string name="back">Voltar</string>
+    <string name="question_probe">Sondagem</string>
+    <string name="question_recall">Lembrar</string>
+    <string name="question_prediction">Previsão</string>
+    <string name="question_check">Verificação</string>
+    <string name="question_position">%1$s · %2$d de %3$d</string>
+    <string name="answer_question">Responder</string>
+    <string name="your_answer">Sua resposta</string>
+    <string name="i_dont_know">Não sei</string>
+    <string name="your_thinking">Seu raciocínio</string>
+    <string name="your_thinking_hint">Raciocínio, dúvidas, reações…</string>
+    <string name="dictate">Ditar</string>
+    <string name="submit">Enviar</string>
+    <string name="confidence">Confiança</string>
+    <string name="option_selected">Selecionada</string>
+    <string name="option_correct">Correta</string>
+    <string name="option_incorrect">Incorreta</string>
+    <string name="option_missed_correct">Resposta correta</string>
+    <plurals name="plan_node_count">
+        <item quantity="one">Plano · %1$d nó</item>
+        <item quantity="many">Plano · %1$d nós</item>
+        <item quantity="other">Plano · %1$d nós</item>
+    </plurals>
+    <string name="plan_node_current">Atual</string>
+    <string name="plan_node_visited">Visitado</string>
+    <string name="open_plan">Abrir plano</string>
+    <string name="reasoning">Raciocínio do agente</string>
+    <string name="expand">Expandir</string>
+    <string name="collapse">Recolher</string>
+    <string name="job_research">Pesquisa na web</string>
+    <string name="job_pdf">Leitura de PDF</string>
+    <string name="job_visual">Visual</string>
+    <string name="job_demo">Demonstração interativa</string>
+    <string name="job_done">Concluída</string>
+    <string name="abort_job">Interromper</string>
+    <string name="open_demo">Abrir demonstração</string>
+    <string name="send">Enviar</string>
+    <string name="stop_turn">Parar o turno</string>
+    <string name="composer_hint">Pergunte, responda ou conduza a aula…</string>
+    <string name="composer_steer">Redirecionar a aula…</string>
+
     <!-- Conteúdo fictício do aprendiz para os mockups. -->
     <string name="fake_goal_crypto">Como a criptografia de chave pública permite que estranhos compartilhem um segredo?</string>
     <string name="fake_goal_fourier">Por que a transformada de Fourier transforma convolução em multiplicação?</string>
@@ -83,4 +125,48 @@
     <string name="fake_search_miss">quântica</string>
     <string name="fake_file_pdf">artigo-rsa.pdf</string>
     <string name="fake_file_photo">quadro.jpg</string>
+    <!-- Conteúdo fictício da sessão de ensino para os mockups. -->
+    <string name="fake_t_probe_intro">Antes de começar, algumas perguntas para descobrir até onde vai o seu entendimento.</string>
+    <string name="fake_t_mod_question">Quanto é 17 mod 5?</string>
+    <string name="fake_t_mod_thinking">17 é 3 × 5 + 2, então o resto é 2.</string>
+    <string name="fake_t_public_question">Quando uma mensagem é cifrada com a chave pública de alguém, quem consegue decifrá-la?</string>
+    <string name="fake_t_public_a">Qualquer pessoa que tenha a chave pública</string>
+    <string name="fake_t_public_b">Só quem tem a chave privada correspondente</string>
+    <string name="fake_t_public_c">Ninguém, até os dois lados combinarem uma senha</string>
+    <string name="fake_t_public_thinking">Acho que só a chave privada desfaz, mas não sei explicar por que a pública não consegue.</string>
+    <string name="fake_t_recall_question">Com suas palavras: o que torna uma função “de mão única”?</string>
+    <string name="fake_t_recall_answer">É fácil de calcular, mas difícil voltar do resultado para a entrada.</string>
+    <string name="fake_t_node_modular">Aritmética modular</string>
+    <string name="fake_t_node_oneway">Funções de mão única</string>
+    <string name="fake_t_node_dlog">Logaritmo discreto</string>
+    <string name="fake_t_node_trapdoor">Funções alçapão</string>
+    <string name="fake_t_node_dh">Troca de chaves Diffie–Hellman</string>
+    <string name="fake_t_node_rsa">Criptografia RSA</string>
+    <string name="fake_t_node_goal">Compartilhar um segredo com estranhos</string>
+    <string name="fake_t_plan_intro">Você já conhece aritmética modular e sabe o que é uma função de mão única. Este é o caminho daí até o seu objetivo.</string>
+    <string name="fake_t_plan_reply">Isso corresponde ao que você quer entender? Diga com suas palavras se faltar algo.</string>
+    <string name="fake_t_prediction_question">Alice e Bob escolhem, cada um, seu próprio número secreto e só conversam por uma linha pública. Eles conseguem chegar ao mesmo número secreto?</string>
+    <string name="fake_t_prediction_yes">Sim, sem nunca enviar os segredos</string>
+    <string name="fake_t_prediction_no">Não, um deles precisa enviar um segredo</string>
+    <string name="fake_t_prediction_thinking">Talvez eles misturem os números com algo público, como cores de tinta?</string>
+    <string name="fake_t_reasoning">O aprendiz previu que sim e recorreu à analogia das tintas. Começar pela regra dos expoentes mod p, depois mostrar a troca como uma sequência e verificar se ele entende por que Eva fica presa.</string>
+    <string name="fake_t_dh_lead">O **Diffie–Hellman** funciona porque os expoentes podem ser aplicados em qualquer ordem, mesmo mod *p*:</string>
+    <string name="fake_t_dh_steps">- Alice escolhe um segredo *a* e envia *A = gᵃ mod p*.\n- Bob escolhe um segredo *b* e envia *B = gᵇ mod p*.\n- Cada um eleva o que recebe ao próprio segredo, e os dois obtêm *gᵃᵇ mod p*.</string>
+    <string name="fake_t_dh_eve">Eva vê *g*, *p*, *A* e *B*, mas nunca *a* nem *b*.</string>
+    <string name="fake_t_check_question">Eva vê A e B. Por que ela não consegue calcular o segredo compartilhado?</string>
+    <string name="fake_t_check_a">A e B são cifrados antes de serem enviados</string>
+    <string name="fake_t_check_b">Ela precisaria de a ou b: um logaritmo discreto</string>
+    <string name="fake_t_check_c">O segredo compartilhado nunca é calculado</string>
+    <string name="fake_t_check2_question">Qual número Alice e Bob acabam compartilhando?</string>
+    <string name="fake_t_check2_a">g^(a+b) mod p</string>
+    <string name="fake_t_check2_b">g^(ab) mod p</string>
+    <string name="fake_t_check_thinking">Se os números fossem pequenos, Eva poderia testar todos os expoentes.</string>
+    <string name="fake_t_photo_caption">A foto do seu quadro: a linha entre as caixas é o canal público.</string>
+    <string name="fake_t_photo_channel">Canal público</string>
+    <string name="fake_t_photo_secret">Segredo compartilhado</string>
+    <string name="fake_t_visual_title">Aritmética mod 12 como um relógio</string>
+    <string name="fake_t_research_title">Qual deve ser o tamanho de p hoje?</string>
+    <string name="fake_t_research_activity">Lendo 3 de 7 fontes</string>
+    <string name="fake_t_demo_title">Teste o Diffie–Hellman com números pequenos</string>
+    <string name="fake_t_steer">E se Eva alterar A antes de Bob recebê-lo?</string>
 </resources>

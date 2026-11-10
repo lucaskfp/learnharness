@@ -79,6 +79,48 @@
     <string name="start_practice">Start practice</string>
     <string name="choose_kind">Choose Session kind</string>
 
+    <!-- Teaching Session -->
+    <string name="back">Back</string>
+    <string name="question_probe">Probe</string>
+    <string name="question_recall">Recall</string>
+    <string name="question_prediction">Prediction</string>
+    <string name="question_check">Check</string>
+    <string name="question_position">%1$s · %2$d of %3$d</string>
+    <string name="answer_question">Answer</string>
+    <string name="your_answer">Your answer</string>
+    <string name="i_dont_know">I don’t know</string>
+    <string name="your_thinking">Your thinking</string>
+    <string name="your_thinking_hint">Reasoning, doubts, reactions…</string>
+    <string name="dictate">Dictate</string>
+    <string name="submit">Submit</string>
+    <string name="confidence">Confidence</string>
+    <string name="confidence_percent" translatable="false">%1$d%%</string>
+    <string name="option_selected">Selected</string>
+    <string name="option_correct">Correct</string>
+    <string name="option_incorrect">Incorrect</string>
+    <string name="option_missed_correct">Correct answer</string>
+    <plurals name="plan_node_count">
+        <item quantity="one">Plan · %1$d node</item>
+        <item quantity="other">Plan · %1$d nodes</item>
+    </plurals>
+    <string name="plan_node_current">Current</string>
+    <string name="plan_node_visited">Visited</string>
+    <string name="open_plan">Open Plan</string>
+    <string name="reasoning">Reasoning</string>
+    <string name="expand">Expand</string>
+    <string name="collapse">Collapse</string>
+    <string name="job_research">Web research</string>
+    <string name="job_pdf">Reading a PDF</string>
+    <string name="job_visual">Visual</string>
+    <string name="job_demo">Interactive demo</string>
+    <string name="job_done">Done</string>
+    <string name="abort_job">Abort</string>
+    <string name="open_demo">Open demo</string>
+    <string name="send">Send</string>
+    <string name="stop_turn">Stop the Turn</string>
+    <string name="composer_hint">Ask, answer, or steer the lesson…</string>
+    <string name="composer_steer">Steer the lesson…</string>
+
     <!-- Fake learner content for the mockups. Not UI text: it stands in for what a learner types. -->
     <string name="fake_goal_crypto">How does public-key cryptography let strangers share a secret?</string>
     <string name="fake_goal_fourier">Why does the Fourier transform turn convolution into multiplication?</string>
@@ -90,4 +132,48 @@
     <string name="fake_search_miss">quantum</string>
     <string name="fake_file_pdf">rsa-paper.pdf</string>
     <string name="fake_file_photo">whiteboard.jpg</string>
+    <!-- Fake Teaching Session content for the mockups (learner and agent text). -->
+    <string name="fake_t_probe_intro">Before we start, a few questions to find where your understanding ends.</string>
+    <string name="fake_t_mod_question">What is 17 mod 5?</string>
+    <string name="fake_t_mod_thinking">17 is 3 × 5 + 2, so the remainder is 2.</string>
+    <string name="fake_t_public_question">When a message is encrypted with someone’s public key, who can decrypt it?</string>
+    <string name="fake_t_public_a">Anyone who has the public key</string>
+    <string name="fake_t_public_b">Only the holder of the matching private key</string>
+    <string name="fake_t_public_c">Nobody, until both sides agree on a password</string>
+    <string name="fake_t_public_thinking">I think only the private key undoes it, but I can’t say why the public one can’t.</string>
+    <string name="fake_t_recall_question">In your own words: what makes a function “one-way”?</string>
+    <string name="fake_t_recall_answer">It is easy to compute, but hard to go back from the result to the input.</string>
+    <string name="fake_t_node_modular">Modular arithmetic</string>
+    <string name="fake_t_node_oneway">One-way functions</string>
+    <string name="fake_t_node_dlog">Discrete logarithm</string>
+    <string name="fake_t_node_trapdoor">Trapdoor functions</string>
+    <string name="fake_t_node_dh">Diffie–Hellman key exchange</string>
+    <string name="fake_t_node_rsa">RSA encryption</string>
+    <string name="fake_t_node_goal">Sharing a secret with strangers</string>
+    <string name="fake_t_plan_intro">You already know modular arithmetic and what a one-way function is. Here is the path from there to your goal.</string>
+    <string name="fake_t_plan_reply">Does this match what you want to understand? Tell me in your own words if something is missing.</string>
+    <string name="fake_t_prediction_question">Alice and Bob each keep a secret number and talk only over a public line. Can they end up with the same secret number?</string>
+    <string name="fake_t_prediction_yes">Yes, without ever sending their secrets</string>
+    <string name="fake_t_prediction_no">No, one of them has to send a secret</string>
+    <string name="fake_t_prediction_thinking">Maybe they mix their numbers with something public, like paint colors?</string>
+    <string name="fake_t_reasoning">The learner predicted yes and reached for the paint analogy. Start from the exponent rule mod p, then show the exchange as a sequence, and check whether they see why Eve is stuck.</string>
+    <string name="fake_t_dh_lead">**Diffie–Hellman** works because exponents can be applied in either order, even mod *p*:</string>
+    <string name="fake_t_dh_steps">- Alice picks a secret *a* and sends *A = gᵃ mod p*.\n- Bob picks a secret *b* and sends *B = gᵇ mod p*.\n- Each raises what they receive to their own secret, and both get *gᵃᵇ mod p*.</string>
+    <string name="fake_t_dh_eve">Eve sees *g*, *p*, *A* and *B*, but never *a* or *b*.</string>
+    <string name="fake_t_check_question">Eve sees A and B. Why can’t she compute the shared secret?</string>
+    <string name="fake_t_check_a">A and B are encrypted before they are sent</string>
+    <string name="fake_t_check_b">She would need a or b: a discrete logarithm</string>
+    <string name="fake_t_check_c">The shared secret is never computed</string>
+    <string name="fake_t_check2_question">Which number do Alice and Bob end up sharing?</string>
+    <string name="fake_t_check2_a">g^(a+b) mod p</string>
+    <string name="fake_t_check2_b">g^(ab) mod p</string>
+    <string name="fake_t_check_thinking">If the numbers were small, Eve could just try every exponent.</string>
+    <string name="fake_t_photo_caption">Your whiteboard photo: the line between the boxes is the public channel.</string>
+    <string name="fake_t_photo_channel">Public channel</string>
+    <string name="fake_t_photo_secret">Shared secret</string>
+    <string name="fake_t_visual_title">Arithmetic mod 12 as a clock</string>
+    <string name="fake_t_research_title">How large must p be today?</string>
+    <string name="fake_t_research_activity">Reading 3 of 7 sources</string>
+    <string name="fake_t_demo_title">Try Diffie–Hellman with small numbers</string>
+    <string name="fake_t_steer">What if Eve changes A before Bob gets it?</string>
 </resources>
