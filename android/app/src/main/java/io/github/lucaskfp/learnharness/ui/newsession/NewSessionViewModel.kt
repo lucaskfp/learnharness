@@ -7,6 +7,8 @@ import io.github.lucaskfp.learnharness.engine.StartSession
 import io.github.lucaskfp.learnharness.engine.prompts.TeachingLanguage as EngineLanguage
 import io.github.lucaskfp.learnharness.engine.store.SettingsRepository
 import io.github.lucaskfp.learnharness.ui.sessions.SessionKind
+import io.github.lucaskfp.learnharness.ui.setup.ModelRole
+import io.github.lucaskfp.learnharness.ui.setup.key
 import io.github.lucaskfp.learnharness.engine.SessionKind as EngineKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +43,7 @@ class NewSessionViewModel(
 
     private suspend fun applyDefaultModel() {
         val kind = mutableState.value.kind
-        val role = if (kind == SessionKind.Teaching) "teaching" else "practice"
+        val role = (if (kind == SessionKind.Teaching) ModelRole.Teaching else ModelRole.Practice).key
         val default = settings.roleModel(role) ?: mutableState.value.models.firstOrNull().orEmpty()
         mutableState.update { it.copy(defaultModel = default, model = default) }
     }

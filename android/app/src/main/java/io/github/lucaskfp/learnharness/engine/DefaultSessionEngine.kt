@@ -76,7 +76,7 @@ class DefaultSessionEngine(
         val row = SessionRow(
             id = sessionId,
             title = titleFromPrompt(request.goal),
-            kind = "teaching",
+            kind = request.kind.name,
             provider = "anthropic",
             model = request.model,
             teachingLanguage = request.teachingLanguage.name,
@@ -142,7 +142,7 @@ class DefaultSessionEngine(
             SessionView(
                 id = session.id,
                 goal = session.title,
-                kind = SessionKind.Teaching,
+                kind = SessionKind.valueOf(session.kind),
                 phase = SessionPhase.Probing,
                 transcript = projection.transcript + liveEntries(liveNow[sessionId].orEmpty()),
                 // The learner answers between Turns, never during one.
@@ -158,7 +158,7 @@ class DefaultSessionEngine(
     override fun sessions(): Flow<List<SessionSummary>> = revision.map {
         val runningNow = running.value
         database.sessions().all().map {
-            SessionSummary(it.id, it.title, SessionKind.Teaching, SessionPhase.Probing, it.updatedAt, it.id in runningNow)
+            SessionSummary(it.id, it.title, SessionKind.valueOf(it.kind), SessionPhase.Probing, it.updatedAt, it.id in runningNow)
         }
     }.distinctUntilChanged()
 
