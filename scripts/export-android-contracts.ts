@@ -12,7 +12,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { askUserQuestionTool, probeExplainTool, probeQuizTool } from "../src/agent/tools.ts";
+import { askUserQuestionTool, probeExplainTool, probeQuizTool, teachExplainToolFor, teachQuizToolFor } from "../src/agent/tools.ts";
+import { probeDoneTool } from "../src/agent/tools/probe.ts";
+import { planTools, PLAN_NODE_IDS_REMINDER } from "../src/agent/tools/plan.ts";
+import { HANDOFF_TEXT, PROBE_DONE_ACK_TEXT } from "../src/core/contracts.ts";
 import { questionResult } from "../src/agent/tool-execute.ts";
 import { INTERRUPTED_TEXT } from "../src/core/native-messages.ts";
 
@@ -20,6 +23,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const OUTPUT = join(HERE, "..", "android", "app", "src", "main", "assets", "upstream", "tools.json");
 
 /** The JSON the Android app reads. Plain data, so a diff shows exactly what changed upstream. */
+// The teacher-side tools are built per request over a chat store; the contract (name, description,
+// schema) does not depend on it, so a store that holds nothing is enough to read them.
+const NO_CHAT = { chatId: "contract", chatStore: { getChat: () => undefined } as never };
+
 export function androidContracts(): unknown {
 	const tool = (t: { name: string; description: string; parameters: unknown }) => ({
 		name: t.name,
@@ -28,10 +35,21 @@ export function androidContracts(): unknown {
 	});
 	return {
 		// Source of each tool in src/agent/tools.ts, for whoever refreshes this file.
-		tools: [tool(probeQuizTool), tool(probeExplainTool), tool(askUserQuestionTool)],
+		tools: [
+				tool(probeQuizTool),
+				tool(probeExplainTool),
+				tool(askUserQuestionTool),
+				tool(probeDoneTool({ ...NO_CHAT, deliver: () => {} }).probe_done!),
+				tool(planTools(NO_CHAT).plan_init!),
+				tool(teachQuizToolFor(NO_CHAT)),
+				tool(teachExplainToolFor(NO_CHAT)),
+			],
 		texts: {
 			questionPosed: questionResult().content[0]!.type === "text" ? (questionResult().content[0] as { text: string }).text : "",
 			interrupted: INTERRUPTED_TEXT,
+				probeDoneAck: PROBE_DONE_ACK_TEXT,
+				probeHandoff: HANDOFF_TEXT,
+				planNodeIdsReminder: PLAN_NODE_IDS_REMINDER,
 		},
 	};
 }

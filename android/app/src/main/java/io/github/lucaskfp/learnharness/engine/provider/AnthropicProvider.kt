@@ -3,6 +3,7 @@ package io.github.lucaskfp.learnharness.engine.provider
 import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.LhJson
 import io.github.lucaskfp.learnharness.engine.model.LhMessage
+import io.github.lucaskfp.learnharness.engine.model.MarkerMessage
 import io.github.lucaskfp.learnharness.engine.model.StopReason
 import io.github.lucaskfp.learnharness.engine.model.TextContent
 import io.github.lucaskfp.learnharness.engine.model.ThinkingContent
@@ -163,11 +164,11 @@ class AnthropicProvider(
                     put("content", message.content.joinToString("\n") { it.text })
                     if (message.isError) put("is_error", true)
                 }
-                is UserMessage -> {
+                is UserMessage, is MarkerMessage -> {
                     flushResults()
                     add(buildJsonObject {
                         put("role", "user")
-                        put("content", buildJsonArray { add(textBlock(message.content)) })
+                        put("content", buildJsonArray { add(textBlock(if (message is MarkerMessage) message.content else (message as UserMessage).content)) })
                     })
                 }
                 is AssistantMessage -> {

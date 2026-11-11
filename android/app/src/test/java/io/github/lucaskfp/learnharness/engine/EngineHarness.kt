@@ -146,3 +146,33 @@ class EngineHarness(
         database.close()
     }
 }
+
+/** Arguments of a `probe_done` call: the learner assessment, one strand per dependency. */
+fun probeDoneArguments(vararg strands: Pair<String, String>): JsonObject = buildJsonObject {
+    put("assessment", buildJsonObject {
+        put("strands", JsonArray(strands.map { (strand, assessment) ->
+            buildJsonObject { put("strand", strand); put("assessment", assessment) }
+        }))
+    })
+}
+
+/** Arguments of a `plan_init` call: a mermaid block. */
+fun planInitArguments(mermaid: String): JsonObject = buildJsonObject { put("mermaid", mermaid) }
+
+/** Arguments of a Teacher `quiz` call tagged with the Plan node it is about. */
+fun quizArguments(
+    nodeId: String,
+    question: String,
+    options: List<Pair<String, String>>,
+    correct: String,
+    explanation: String = "Because.",
+): JsonObject = buildJsonObject {
+    put("type", "check")
+    put("nodeId", nodeId)
+    put("question", question)
+    put("options", optionsJson(options))
+    put("explanation", explanation)
+    put("correctAnswer", correct)
+}
+
+val TwoNodePlan = "graph TD\n  slope[The slope idea] --> rule[The power rule]"

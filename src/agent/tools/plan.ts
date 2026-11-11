@@ -11,7 +11,7 @@ import { parseMermaidPlan } from "./mermaid-plan.ts";
  *  load-bearing — every later quiz/explain call must reference one. The
  *  field-drop incidents (tools_fails_2) showed the turn's tail is where
  *  discipline slips; the reminder lands right there. */
-const PLAN_NODE_IDS_REMINDER =
+export const PLAN_NODE_IDS_REMINDER =
 	"These are the plan's node ids — the only valid nodeId values for every quiz and explain call from here on. Reference them exactly.";
 
 /** What the plan tools close over (the plan-tree half of the tool context). */

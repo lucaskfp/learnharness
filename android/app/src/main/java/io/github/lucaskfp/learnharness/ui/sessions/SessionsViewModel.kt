@@ -63,6 +63,8 @@ class SessionsViewModel(
         },
         phase = when (phase) {
             EnginePhase.Probing -> SessionPhase.Probing
+            EnginePhase.Planning -> SessionPhase.Planning
+            EnginePhase.Teaching -> SessionPhase.Teaching
         },
         minutesSinceActivity = ((now - updatedAt) / 60_000).coerceAtLeast(0),
         turnRunning = turnRunning,

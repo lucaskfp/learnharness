@@ -1,6 +1,8 @@
 package io.github.lucaskfp.learnharness.ui.teaching
 
 import io.github.lucaskfp.learnharness.engine.PendingQuestionView
+import io.github.lucaskfp.learnharness.engine.PlanView
+import io.github.lucaskfp.learnharness.engine.SessionPhase as EnginePhase
 import io.github.lucaskfp.learnharness.engine.SessionView
 import io.github.lucaskfp.learnharness.engine.TranscriptEntry
 import io.github.lucaskfp.learnharness.engine.question.QuestionAnswerData
@@ -27,7 +29,8 @@ fun toTeachingState(
     expandedReasoning: Set<Int>,
 ): TeachingSessionState = TeachingSessionState(
     goal = view.goal,
-    phase = SessionPhase.Probing,
+    phase = view.phase.toUi(),
+    plan = view.plan?.toUi(),
     transcript = view.transcript.mapIndexed { index, entry -> entry.toItem(index in expandedReasoning) },
     question = view.pendingQuestion?.let { pending ->
         pending.toPending(draft.takeIf { it.toolCallId == pending.toolCallId } ?: QuestionDraft())
@@ -41,7 +44,22 @@ private fun TranscriptEntry.toItem(reasoningExpanded: Boolean): TranscriptItem =
     is TranscriptEntry.AgentText -> TranscriptItem.AgentProse(markdown)
     is TranscriptEntry.Reasoning -> TranscriptItem.Reasoning(text, reasoningExpanded)
     is TranscriptEntry.Answered -> data.toItem()
+    is TranscriptEntry.PhaseBoundary -> TranscriptItem.PhaseBoundary(phase.toUi(), nodeCount)
+    is TranscriptEntry.PlanSnapshot -> TranscriptItem.PlanSnapshot(plan.toUi())
 }
+
+private fun EnginePhase.toUi(): SessionPhase = when (this) {
+    EnginePhase.Probing -> SessionPhase.Probing
+    EnginePhase.Planning -> SessionPhase.Planning
+    EnginePhase.Teaching -> SessionPhase.Teaching
+}
+
+private fun PlanView.toUi() = Plan(
+    nodes = nodes.map { PlanNode(it.id, it.title) },
+    edges = edges.map { PlanEdge(it.from, it.to) },
+    current = current,
+    visited = visited,
+)
 
 private fun QuestionAnswerData.toItem(): TranscriptItem.AnsweredQuestion {
     val chosen = answers.map { it.index }.toSet()

@@ -19,6 +19,9 @@ class PromptComposer(private val assets: AssetSource) {
     fun prober(language: TeachingLanguage): String =
         compose(listOf("system-prompt.md") + fragments("prober") + fragments("shared"), language)
 
+    fun teacher(language: TeachingLanguage): String =
+        compose(listOf("system-prompt.md") + fragments("teacher") + fragments("shared"), language)
+
     private fun fragments(directory: String): List<String> =
         assets.list("$Root/$directory")
             .filter { FragmentName.matches(it) }

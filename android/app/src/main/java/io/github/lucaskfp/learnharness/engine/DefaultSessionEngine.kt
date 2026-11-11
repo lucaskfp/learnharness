@@ -5,6 +5,7 @@ import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.ContentBlock
 import io.github.lucaskfp.learnharness.engine.model.LhJson
 import io.github.lucaskfp.learnharness.engine.model.LhMessage
+import io.github.lucaskfp.learnharness.engine.model.MarkerMessage
 import io.github.lucaskfp.learnharness.engine.model.StopReason
 import io.github.lucaskfp.learnharness.engine.model.TextContent
 import io.github.lucaskfp.learnharness.engine.model.ThinkingContent
@@ -22,7 +23,8 @@ import io.github.lucaskfp.learnharness.engine.question.compactAnswerForModel
 import io.github.lucaskfp.learnharness.engine.store.LearnHarnessDatabase
 import io.github.lucaskfp.learnharness.engine.store.MessageRow
 import io.github.lucaskfp.learnharness.engine.store.SessionRow
-import io.github.lucaskfp.learnharness.engine.tools.ProberTools
+import io.github.lucaskfp.learnharness.engine.tools.AgentKind
+import io.github.lucaskfp.learnharness.engine.tools.AgentTools
 import io.github.lucaskfp.learnharness.engine.tools.QuizMechanics
 import io.github.lucaskfp.learnharness.engine.tools.ToolContracts
 import kotlinx.coroutines.CancellationException
@@ -60,7 +62,7 @@ class DefaultSessionEngine(
 ) : SessionEngine {
     private val contracts = ToolContracts.load(assets)
     private val prompts = PromptComposer(assets)
-    private val tools = ProberTools(contracts, environment.quizMechanics)
+    private val tools = AgentTools(contracts, environment.quizMechanics)
 
     private val running = MutableStateFlow<Set<String>>(emptySet())
     private val live = MutableStateFlow<Map<String, List<ContentBlock>>>(emptyMap())
@@ -143,7 +145,8 @@ class DefaultSessionEngine(
                 id = session.id,
                 goal = session.title,
                 kind = SessionKind.valueOf(session.kind),
-                phase = SessionPhase.Probing,
+                phase = phaseOf(messages),
+                plan = planViewOf(messages),
                 transcript = projection.transcript + liveEntries(liveNow[sessionId].orEmpty()),
                 // The learner answers between Turns, never during one.
                 pendingQuestion = if (turnRunning) null else projection.pending?.let {
@@ -158,7 +161,7 @@ class DefaultSessionEngine(
     override fun sessions(): Flow<List<SessionSummary>> = revision.map {
         val runningNow = running.value
         database.sessions().all().map {
-            SessionSummary(it.id, it.title, SessionKind.valueOf(it.kind), SessionPhase.Probing, it.updatedAt, it.id in runningNow)
+            SessionSummary(it.id, it.title, SessionKind.valueOf(it.kind), phaseOf(loadHistory(it.id)), it.updatedAt, it.id in runningNow)
         }
     }.distinctUntilChanged()
 
@@ -187,45 +190,66 @@ class DefaultSessionEngine(
      */
     private suspend fun runTurn(sessionId: String) {
         val session = database.sessions().get(sessionId) ?: return
-        val system = prompts.prober(TeachingLanguage.valueOf(session.teachingLanguage))
+        val language = TeachingLanguage.valueOf(session.teachingLanguage)
         var history = loadHistory(sessionId)
         val produced = mutableListOf<LhMessage>()
         try {
             val provider = environment.provider(session.provider)
             while (true) {
-                val request = ProviderRequest(
-                    model = session.model,
-                    systemPrompt = system,
-                    messages = toLlmMessages(history, contracts.texts.interrupted, environment.clock()),
-                    tools = tools.specs,
-                    thinking = true,
-                )
-                val assistant = callModel(sessionId, provider, request, produced)
-                produced += assistant
-                history = history + assistant
-                if (assistant.stopReason != StopReason.ToolUse) break
-
+                // The agent is chosen from the history at the start of each stretch: after a
+                // probe_done the Prober still finishes its Turn (its closing sentence), and the
+                // Teacher takes over from the next stretch.
+                val kind = agentFor(history)
+                val system = if (kind == AgentKind.Prober) prompts.prober(language) else prompts.teacher(language)
                 var posedQuestion = false
-                for (call in assistant.toolCalls) {
-                    val outcome = tools.execute(call)
-                    if (outcome.terminates) {
-                        // The "question posed" placeholder is never saved: the learner's answer is the result.
-                        posedQuestion = true
-                        continue
-                    }
-                    val result = ToolResultMessage(
-                        id = newId("msg"),
-                        toolCallId = call.id,
-                        toolName = call.name,
-                        content = listOf(TextContent(outcome.text)),
-                        details = outcome.details,
-                        isError = outcome.isError,
-                        timestamp = environment.clock(),
+                while (true) {
+                    val request = ProviderRequest(
+                        model = session.model,
+                        systemPrompt = system,
+                        messages = toLlmMessages(history, contracts.texts.interrupted, environment.clock()),
+                        tools = tools.specs(kind),
+                        thinking = true,
                     )
-                    produced += result
-                    history = history + result
+                    val assistant = callModel(sessionId, provider, request, produced)
+                    produced += assistant
+                    history = history + assistant
+                    if (assistant.stopReason != StopReason.ToolUse) break
+
+                    for (call in assistant.toolCalls) {
+                        val outcome = tools.execute(kind, call, history)
+                        if (outcome.terminates) {
+                            // The "question posed" placeholder is never saved: the learner's answer is the result.
+                            posedQuestion = true
+                            continue
+                        }
+                        val result = ToolResultMessage(
+                            id = newId("msg"),
+                            toolCallId = call.id,
+                            toolName = call.name,
+                            content = listOf(TextContent(outcome.text)),
+                            details = outcome.details,
+                            isError = outcome.isError,
+                            timestamp = environment.clock(),
+                        )
+                        produced += result
+                        history = history + result
+                    }
+                    if (posedQuestion) break
                 }
-                if (posedQuestion) break
+                // Handoff: a Prober stretch that concluded the probe and ended cleanly wakes the
+                // Teacher at once, so the learner goes from assessment to Plan without prompting.
+                val ended = history.last()
+                val concluded = kind == AgentKind.Prober && !posedQuestion && hasProbeDone(history) &&
+                    ended is AssistantMessage && ended.stopReason == StopReason.Stop
+                if (!concluded) break
+                val handoff = MarkerMessage(
+                    id = "steer_probe_$sessionId",
+                    customType = "probe-handoff",
+                    content = contracts.texts.probeHandoff,
+                    timestamp = environment.clock(),
+                )
+                produced += handoff
+                history = history + handoff
             }
         } catch (e: CancellationException) {
             throw e

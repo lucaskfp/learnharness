@@ -18,6 +18,12 @@ data class ContractTexts(
     val questionPosed: String,
     /** The result synthesized for a question call whose turn was interrupted. */
     val interrupted: String,
+    /** The fixed result of an accepted `probe_done`: the assessment is the call's own arguments. */
+    val probeDoneAck: String,
+    /** The user-role wake that starts the Teacher once the probe has concluded. */
+    val probeHandoff: String,
+    /** Rides a successful `plan_init` result: from now on every quiz names one of these node ids. */
+    val planNodeIdsReminder: String,
 )
 
 /**

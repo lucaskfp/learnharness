@@ -58,6 +58,21 @@ data class ToolResultMessage(
     override val timestamp: Long,
 ) : LhMessage
 
+/**
+ * Upstream's app-only marker (`role: "custom"`): scaffolding, not speech. The model reads
+ * [content] as a user turn; [details] is the UI payload and never reaches the model.
+ */
+@Serializable
+@SerialName("custom")
+data class MarkerMessage(
+    override val id: String,
+    val customType: String,
+    val content: String,
+    val display: Boolean = true,
+    val details: JsonElement? = null,
+    override val timestamp: Long,
+) : LhMessage
+
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
 @JsonClassDiscriminator("type")

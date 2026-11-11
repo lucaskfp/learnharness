@@ -298,7 +298,7 @@ class SessionEngineTest {
 
             assertEquals(QuestionKind.Explain, question.kind)
             assertTrue(question.freeText)
-            assertEquals(listOf("recall", "ask_user_question"), recallHarness.provider.requests.first().tools.map { it.name })
+            assertEquals(listOf("recall", "ask_user_question", "probe_done"), recallHarness.provider.requests.first().tools.map { it.name })
 
             runBlocking {
                 recallHarness.engine.submit(id, LearnerInput.Answer("toolu_r", AnswerRequest(text = "What it approaches")))
@@ -320,7 +320,7 @@ class SessionEngineTest {
 
         val request = provider.requests.single()
         assertEquals("claude-sonnet-5-5", request.model)
-        assertEquals(listOf("probe", "ask_user_question"), request.tools.map { it.name })
+        assertEquals(listOf("probe", "ask_user_question", "probe_done"), request.tools.map { it.name })
         assertTrue(request.tools.first { it.name == "probe" }.description.startsWith("Ask the learner a GRADED question"))
         assertTrue(request.systemPrompt.startsWith("# The agent"))
         assertTrue("the prober doctrine is composed in", request.systemPrompt.contains("probe"))

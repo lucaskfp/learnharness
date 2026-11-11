@@ -4,12 +4,15 @@ import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.ContentBlock
 import io.github.lucaskfp.learnharness.engine.model.LhJson
 import io.github.lucaskfp.learnharness.engine.model.LhMessage
+import io.github.lucaskfp.learnharness.engine.model.MarkerMessage
 import io.github.lucaskfp.learnharness.engine.model.StopReason
 import io.github.lucaskfp.learnharness.engine.model.TextContent
 import io.github.lucaskfp.learnharness.engine.model.ThinkingContent
 import io.github.lucaskfp.learnharness.engine.model.ToolCall
 import io.github.lucaskfp.learnharness.engine.model.ToolResultMessage
 import io.github.lucaskfp.learnharness.engine.model.UserMessage
+import io.github.lucaskfp.learnharness.engine.plan.PlanPosition
+import io.github.lucaskfp.learnharness.engine.plan.latestPlanTree
 import io.github.lucaskfp.learnharness.engine.question.ArmedQuestion
 import io.github.lucaskfp.learnharness.engine.question.QuestionAnswerData
 import io.github.lucaskfp.learnharness.engine.question.QuestionTools
@@ -30,11 +33,23 @@ internal fun project(messages: List<LhMessage>): Projection {
     val newestAssistant = messages.indexOfLast { it is AssistantMessage }
     val transcript = mutableListOf<TranscriptEntry>()
     var pending: ArmedQuestion? = null
+    val teachingStart = teachingStartIndex(messages)
+    var plansSeen = 0
     messages.forEachIndexed { index, message ->
         when (message) {
             is UserMessage -> transcript += TranscriptEntry.Learner(message.content)
-            is ToolResultMessage -> Unit
+            is MarkerMessage -> Unit
+            is ToolResultMessage -> if (message.toolName == "plan_init") {
+                // Each successful plan_init is a snapshot, so a replacement is visible; the first opens the Planning seam.
+                val tree = latestPlanTree(listOf(message))
+                if (tree != null) {
+                    plansSeen++
+                    if (plansSeen == 1) transcript += TranscriptEntry.PhaseBoundary(SessionPhase.Planning, tree.nodes.size)
+                    transcript += TranscriptEntry.PlanSnapshot(planView(tree, PlanPosition(null, emptySet())))
+                }
+            }
             is AssistantMessage -> {
+                if (index == teachingStart) transcript += TranscriptEntry.PhaseBoundary(SessionPhase.Teaching)
                 for (block in message.content) {
                     when (block) {
                         is TextContent -> if (block.text.isNotBlank()) transcript += TranscriptEntry.AgentText(block.text)
@@ -85,7 +100,8 @@ internal fun toLlmMessages(messages: List<LhMessage>, interruptedText: String, n
         if (message is AssistantMessage && (message.stopReason == StopReason.Error || message.stopReason == StopReason.Aborted)) {
             return@forEachIndexed
         }
-        out += message
+        // Markers flatten to user turns for the model, as upstream's `toLlmMessages` does.
+        out += if (message is MarkerMessage) UserMessage(message.id, message.content, message.timestamp) else message
         if (message is AssistantMessage) {
             val answered = messages.drop(index + 1).filterIsInstance<ToolResultMessage>().map { it.toolCallId }.toSet()
             message.toolCalls.filter { it.id !in answered }.forEach { call ->

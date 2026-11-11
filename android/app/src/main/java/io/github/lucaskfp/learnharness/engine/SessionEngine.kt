@@ -1,5 +1,7 @@
 package io.github.lucaskfp.learnharness.engine
 
+import io.github.lucaskfp.learnharness.engine.plan.PlanEdge
+import io.github.lucaskfp.learnharness.engine.plan.PlanNode
 import io.github.lucaskfp.learnharness.engine.prompts.TeachingLanguage
 import io.github.lucaskfp.learnharness.engine.question.AnswerRequest
 import io.github.lucaskfp.learnharness.engine.question.QuestionAnswerData
@@ -9,8 +11,8 @@ import kotlinx.coroutines.flow.Flow
 
 enum class SessionKind { Teaching, Practice }
 
-/** Where a Session stands. Teaching Sessions start in [Probing]; later phases arrive with their issues. */
-enum class SessionPhase { Probing }
+/** Where a Session stands. Teaching Sessions start in [Probing], move to [Planning] at a successful `probe_done`, and to [Teaching] at the first quiz tagged with a Plan node. */
+enum class SessionPhase { Probing, Planning, Teaching }
 
 /** Everything needed to start a Session. */
 data class StartSession(
@@ -51,6 +53,16 @@ data class PendingQuestionView(
     val freeText: Boolean,
 )
 
+/** The Plan as the learner sees it: the Teacher's lesson map and where the lesson stands on it. */
+data class PlanView(
+    val nodes: List<PlanNode>,
+    val edges: List<PlanEdge>,
+    /** The node the Teacher's latest tagged question is about; null before the first one. */
+    val current: String?,
+    /** Nodes of earlier stays. A revisited node is both visited and current. */
+    val visited: Set<String>,
+)
+
 /** One entry of a Session's transcript, as the engine derives it from the saved history. */
 sealed interface TranscriptEntry {
     data class Learner(val text: String) : TranscriptEntry
@@ -63,6 +75,15 @@ sealed interface TranscriptEntry {
 
     /** A question the learner has answered, graded where it is graded. */
     data class Answered(val data: QuestionAnswerData) : TranscriptEntry
+
+    /**
+     * Where the Session enters a new phase: Planning at the first Plan (with its node count) and
+     * Teaching at the first question tagged with a Plan node.
+     */
+    data class PhaseBoundary(val phase: SessionPhase, val nodeCount: Int? = null) : TranscriptEntry
+
+    /** The Plan as the Teacher made it, frozen. A replacement adds another snapshot. */
+    data class PlanSnapshot(val plan: PlanView) : TranscriptEntry
 }
 
 /** A Session as the UI observes it. */
@@ -74,6 +95,8 @@ data class SessionView(
     /** Saved history, plus the output of a running Turn as it streams in. */
     val transcript: List<TranscriptEntry>,
     val pendingQuestion: PendingQuestionView?,
+    /** The current Plan, once the Teacher has made one. */
+    val plan: PlanView? = null,
     val turnRunning: Boolean,
     /** Why the last Turn failed, until the next input. */
     val error: String?,
