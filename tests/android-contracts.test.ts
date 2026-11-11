@@ -9,5 +9,6 @@ import test from "node:test";
 import { OUTPUT, renderAndroidContracts } from "../scripts/export-android-contracts.ts";
 
 test("android tool contracts are up to date", () => {
-	assert.equal(readFileSync(OUTPUT, "utf8"), renderAndroidContracts());
+	// A Windows checkout may have converted the committed file to CRLF.
+	assert.equal(readFileSync(OUTPUT, "utf8").replace(/\r\n/g, "\n"), renderAndroidContracts());
 });
