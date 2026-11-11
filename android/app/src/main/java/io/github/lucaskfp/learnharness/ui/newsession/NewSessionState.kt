@@ -29,6 +29,8 @@ data class NewSessionState(
     val teachingLanguage: TeachingLanguage = TeachingLanguage.English,
     val attachments: List<Attachment> = emptyList(),
     val kindMenuExpanded: Boolean = false,
+    /** Whether Sessions of this [kind] can be started yet. */
+    val kindSupported: Boolean = true,
 ) {
-    val canStart: Boolean get() = goal.isNotBlank()
+    val canStart: Boolean get() = goal.isNotBlank() && kindSupported
 }

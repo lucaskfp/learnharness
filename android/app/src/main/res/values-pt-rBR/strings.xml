@@ -18,6 +18,7 @@
     <string name="setup_key_testing">Testando a chave…</string>
     <string name="setup_key_valid">A chave funciona</string>
     <string name="setup_key_invalid">O provedor recusou esta chave. Confira e tente novamente.</string>
+    <string name="setup_provider_unavailable">Este provedor ainda não está disponível.</string>
     <string name="setup_base_url">URL base</string>
     <string name="setup_model_name">Nome do modelo</string>
     <string name="setup_models">Modelos padrão</string>
@@ -77,6 +78,8 @@
     <string name="question_probe">Sondagem</string>
     <string name="question_recall">Lembrar</string>
     <string name="question_prediction">Previsão</string>
+    <string name="turn_failed">O modelo não respondeu: %1$s</string>
+    <string name="question_ask">Pergunta</string>
     <string name="question_check">Verificação</string>
     <string name="question_position">%1$s · %2$d de %3$d</string>
     <string name="answer_question">Responder</string>

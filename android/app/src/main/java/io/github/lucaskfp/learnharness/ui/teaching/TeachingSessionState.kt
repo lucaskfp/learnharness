@@ -6,7 +6,7 @@ import io.github.lucaskfp.learnharness.R
 import io.github.lucaskfp.learnharness.ui.sessions.SessionPhase
 
 /** The kinds of question an agent asks (upstream tools `probe`, `recall`, `quiz` and `explain`). */
-enum class QuestionKind(@StringRes val label: Int, val freeRecall: Boolean) {
+enum class QuestionKind(@StringRes val label: Int, val freeRecall: Boolean, val graded: Boolean = true) {
     /** A Prober multiple-choice question. */
     Probe(R.string.question_probe, freeRecall = false),
 
@@ -18,6 +18,9 @@ enum class QuestionKind(@StringRes val label: Int, val freeRecall: Boolean) {
 
     /** A Teacher quiz that checks understanding after an explanation. */
     Check(R.string.question_check, freeRecall = false),
+
+    /** An agent's ungraded question (`ask_user_question`): no right answer, so no confidence. */
+    Ask(R.string.question_ask, freeRecall = false, graded = false),
 }
 
 /** How a quiz option is shown: picked or not, and after grading, right or wrong. */
@@ -46,6 +49,8 @@ data class PendingQuestion(
     val position: Int = 1,
     val count: Int = 1,
     val collapsed: Boolean = false,
+    /** Answered in words rather than by choosing an option. */
+    val freeText: Boolean = kind.freeRecall,
 )
 
 data class PlanNode(val id: String, val title: String)

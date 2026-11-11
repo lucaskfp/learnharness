@@ -22,6 +22,7 @@
     <string name="setup_key_testing">Testing key…</string>
     <string name="setup_key_valid">Key works</string>
     <string name="setup_key_invalid">The provider rejected this key. Check it and try again.</string>
+    <string name="setup_provider_unavailable">This provider isn’t available yet.</string>
     <string name="setup_base_url">Base URL</string>
     <string name="setup_model_name">Model name</string>
     <string name="setup_models">Default models</string>
@@ -84,6 +85,8 @@
     <string name="question_probe">Probe</string>
     <string name="question_recall">Recall</string>
     <string name="question_prediction">Prediction</string>
+    <string name="turn_failed">The model did not answer: %1$s</string>
+    <string name="question_ask">Question</string>
     <string name="question_check">Check</string>
     <string name="question_position">%1$s · %2$d of %3$d</string>
     <string name="answer_question">Answer</string>

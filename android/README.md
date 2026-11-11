@@ -2,7 +2,20 @@
 
 A native Android version of [LearnHarness](../README.md): Kotlin, Jetpack Compose and Material 3 Expressive, running the agent runtime entirely on the device ([ADR 0001](../docs/adr/0001-standalone-kotlin-agent-runtime.md)). The spec is [lucaskfp/learnharness#1](https://github.com/lucaskfp/learnharness/issues/1). Domain terms are defined in the root [GLOSSARY.md](../GLOSSARY.md).
 
-This is a scaffold so far: the app opens into a navigation shell with three empty destinations (Sessions, Graph, Settings). The first screens exist as mockups only: stateless composables rendered from fake data in `@Preview`s (Setup, Sessions, New Session, and a Teaching Session through Probe, Plan and Teach; see `ui/setup`, `ui/sessions`, `ui/newsession`, `ui/teaching`, `ui/preview/FakeData.kt` and `ui/preview/FakeTeaching.kt`). The fake learner and agent content (Session goals, file names, questions, explanations) is in `fake_*` string resources, so each locale's mockups show it in that language.
+The first Teaching Turn runs end to end ([#7](https://github.com/lucaskfp/learnharness/issues/7)): on first run the learner enters an Anthropic API key, starts a Teaching Session with a goal, the Prober asks a question, and the learner answers it with confidence and thinking. Graph and Settings are still empty destinations. Practice Sessions, Plan, Teach and the other providers come with later issues.
+
+The screens are stateless composables drawn from fake data in `@Preview`s (the mockups) and are wired to the engine by thin routes and ViewModels (`ui/AppRoot.kt`, `*Route.kt`, `*ViewModel.kt`; the fake content lives in `ui/preview/FakeData.kt`, `ui/preview/FakeTeaching.kt` and the `fake_*` string resources, so each locale's mockups show it in that language).
+
+## Session engine
+
+`engine/` is the deep module that owns Sessions end to end; the UI only calls `SessionEngine` (`start`, `submit`, `observe`, `sessions`, `delete`).
+
+- **Turns** follow upstream: a Turn builds a fresh agent from the saved history, loops over model calls and tools, and saves its output once, at settlement (partial output too, if cancelled or failed). The learner's input is saved before inference. One Turn runs per Session; a second input throws `TurnInProgressException`.
+- **History** is stored in Room as upstream-shaped message JSON (`engine/model/Messages.kt`, one row per message), so export and import can round-trip to the desktop format. The pending question is derived from the history, so a Session resumes mid-question after a restart.
+- **Prober tools**: `probe` (or `recall` under the free-recall mechanic) and `ask_user_question`. Arguments are healed, validated against the imported JSON Schema, then checked against upstream's authoring rules; a bad call returns to the model as an error. Options are shuffled and graded on the device (`engine/question/QuestionCore.kt`, a port of upstream's `question-core.ts`); the model reads only what the learner added.
+- **Provider port** (`engine/provider`): `AnthropicProvider` streams the Messages API over SSE with text, thinking (adaptive on current models, a token budget on older ones), tool calls and usage. API keys are stored AES-GCM encrypted with an Android Keystore key (`engine/store/KeyVault.kt`); Robolectric has no Keystore, so tests use a fake vault.
+- **Upstream imports**: prompts are copied into the APK by the `syncUpstreamPrompts` Gradle task (`src/agent/system-prompt.md` and the `prompts/*/` fragments, composed in upstream's order by `PromptComposer`, plus a teaching-language instruction). Tool names, descriptions and input schemas are read from `app/src/main/assets/upstream/tools.json`, generated from the real tool modules. After a tool contract changes upstream, run `npm ci --ignore-scripts && npx tsx scripts/export-android-contracts.ts` from the repository root; `tests/android-contracts.test.ts` fails when the file is stale.
+- **Tests** (`app/src/test/.../engine`) drive the engine through its public interface with a scripted fake provider and an in-memory Room database; only the model is faked. `AnthropicProviderTest` checks the SSE adapter against a local server, and `AppRootTest` walks the wired app from a fresh install to an answered question.
 
 ## Mockups
 

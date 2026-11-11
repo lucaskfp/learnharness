@@ -231,7 +231,10 @@ private fun KeyTestRow(state: SetupState, onTestKey: () -> Unit) {
                 }
                 KeyStatus.Invalid -> {
                     StatusIcon(R.drawable.ic_error, MaterialTheme.colorScheme.error)
-                    StatusText(R.string.setup_key_invalid, MaterialTheme.colorScheme.error)
+                    StatusText(
+                        if (state.providerUnavailable) R.string.setup_provider_unavailable else R.string.setup_key_invalid,
+                        MaterialTheme.colorScheme.error,
+                    )
                 }
             }
         }

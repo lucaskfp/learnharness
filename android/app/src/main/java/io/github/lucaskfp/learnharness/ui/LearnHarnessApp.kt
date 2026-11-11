@@ -25,9 +25,10 @@ import io.github.lucaskfp.learnharness.ui.destinations.DestinationScreen
 import io.github.lucaskfp.learnharness.ui.navigation.TopLevelDestination
 import io.github.lucaskfp.learnharness.ui.theme.LearnHarnessTheme
 
+/** The navigation shell with a placeholder in every destination: the stateless app the previews draw. */
 @Composable
 fun LearnHarnessApp() {
-    LearnHarnessTheme { NavigationShell() }
+    LearnHarnessTheme { NavigationShell { DestinationScreen(it) } }
 }
 
 /**
@@ -35,7 +36,7 @@ fun LearnHarnessApp() {
  * on top of it, so Back from Graph or Settings returns to Sessions.
  */
 @Composable
-private fun NavigationShell() {
+internal fun NavigationShell(destinationContent: @Composable (TopLevelDestination) -> Unit) {
     val backStack = rememberNavBackStack(TopLevelDestination.Sessions)
     val current = backStack.last() as TopLevelDestination
     val suiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfoV2())
@@ -65,7 +66,7 @@ private fun NavigationShell() {
             backStack = backStack,
             entryProvider = entryProvider {
                 TopLevelDestination.entries.forEach { destination ->
-                    entry(destination) { DestinationScreen(destination) }
+                    entry(destination) { destinationContent(destination) }
                 }
             },
         )

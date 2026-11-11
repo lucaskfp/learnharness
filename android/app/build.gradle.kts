@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.roborazzi)
 }
 
@@ -42,6 +43,20 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Upstream's system prompts are copied, never retyped: the segments the runtime composes
+// (src/agent/system-prompt.md and the numeric-prefix fragments of prompts/) become assets.
+// Tool contracts come from assets/upstream/tools.json instead (scripts/export-android-contracts.ts).
+val syncUpstreamPrompts = tasks.register<Sync>("syncUpstreamPrompts") {
+    val upstream = layout.projectDirectory.dir("../../src/agent")
+    from(upstream.file("system-prompt.md"))
+    from(upstream.dir("prompts")) { include("*/*.md") }
+    into(layout.buildDirectory.dir("generated/upstream-assets/upstream/prompts"))
+}
+
+android.sourceSets.getByName("main").assets.srcDir(
+    files(layout.buildDirectory.dir("generated/upstream-assets")).builtBy(syncUpstreamPrompts),
+)
+
 roborazzi {
     outputDir.set(file("src/test/screenshots"))
     generateComposePreviewRobolectricTests {
@@ -64,6 +79,14 @@ dependencies {
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    implementation(libs.okhttp)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.markdown.renderer.m3)
     implementation(libs.jlatexmath.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
@@ -71,6 +94,8 @@ dependencies {
 
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.compose.ui.test.junit4)

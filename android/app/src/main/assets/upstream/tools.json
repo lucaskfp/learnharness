@@ -1,0 +1,148 @@
+{
+  "tools": [
+    {
+      "name": "probe",
+      "description": "Ask the learner a GRADED question with a known correct answer, then instantly grade and give feedback. Unlike ask_user_question (which collects preferences/decisions with no right answer), probe always has a correct answer supplied by you, marks the learner's selection right/wrong, reveals the correct answer, and can show an explanation. Options-only: single-select or multi-select, plus an automatic 'I don't know' choice so the learner can signal a genuine gap instead of guessing. An always-present optional thinking field lets the learner attach his reasoning to ANY answer; it reaches you only when non-empty. No free-text answers — for non-graded questions use ask_user_question instead. ONE question per turn: call a single probe, then end your turn — his answer determines the next.\nExample arguments — copy the escaping exactly: inside JSON strings a LaTeX backslash is \\\\ and a newline is \\n.\n```json\n{\n  \"question\": \"A signal is $y=\\\\sin(2x)$ and $\\\\frac{dx}{dt}=3$. What is $\\\\frac{dy}{dt}$?\",\n  \"options\": [\n    {\n      \"label\": \"$6\\\\cos(2x)$\",\n      \"value\": \"a\"\n    },\n    {\n      \"label\": \"$2\\\\cos(2x)$\",\n      \"value\": \"b\"\n    },\n    {\n      \"label\": \"$3\\\\cos(2x)$\",\n      \"value\": \"c\"\n    }\n  ],\n  \"explanation\": \"The phase changes twice as fast as $x$; multiply by the sine's slope:\\n$$\\n\\\\frac{dy}{dt}=\\\\cos(2x)\\\\cdot2\\\\cdot3=6\\\\cos(2x)\\n$$\",\n  \"correctAnswer\": \"a\"\n}\n```",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "question",
+          "options",
+          "explanation",
+          "correctAnswer"
+        ],
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "The single quiz question to ask. ONE question per turn: ask, then end your turn — the answer determines the next question."
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Display label for the answer option — a bare claim, no reasoning"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Optional machine-readable value returned for the option. Defaults to the label."
+                }
+              }
+            },
+            "minItems": 2,
+            "description": "REQUIRED. The answer options (2 or more) as a JSON ARRAY of option objects — never a JSON-encoded string. Options only — there is no free-text mode. Give each option a stable `value`; you reference the correct one by that value in correctAnswer. Never add your own 'I don't know' option — that choice is added for you."
+          },
+          "multiSelect": {
+            "type": "boolean",
+            "description": "Set to true when more than one option is correct and the learner must select all of them."
+          },
+          "explanation": {
+            "type": "string",
+            "description": "REQUIRED. Explanation revealed AFTER the learner answers (shown whether they got it right or wrong). Use it to reinforce why the correct answer is correct. It is written BEFORE correctAnswer by design: reason it out first, then commit the answer the reasoning supports."
+          },
+          "correctAnswer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "REQUIRED. The correct answer as the option value(s) — the `value` field of the option you intend. Single-select: a single string (e.g. \"mercury\"). Multi-select: an array of strings (e.g. [\"belize\", \"niue\"]); the learner is only correct if their selection matches this set exactly. Always pass the value, not a position number — this is self-checking and prevents miscounting. A value that matches no option fails validation and the call is returned to you to fix."
+          },
+          "details": {
+            "type": "string",
+            "description": "Optional extra context or instructions shown under the question."
+          }
+        }
+      }
+    },
+    {
+      "name": "recall",
+      "description": "Ask the learner to EXPLAIN something in his own words — a graded check with NO options: he types a free-text answer. Unlike ask_user_question (no right answer), recall always has one. THE COMMITMENT RULE: correctAnswer is the FULL correct answer in your own words, reasoning included, COMMITTED before he ever sees the question. When his answer returns, grade it strictly against the commitment — never revise it after seeing his words. He sees the committed answer on submit. ONE question per turn: call a single recall, then end your turn — his answer determines the next.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "question",
+          "correctAnswer"
+        ],
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "The single question to ask. ONE question per turn: ask, then end your turn — the answer determines the next."
+          },
+          "correctAnswer": {
+            "type": "string",
+            "description": "REQUIRED. The full correct answer in your own words, reasoning included — COMMITTED before the learner ever sees the question. The commitment is immutable: when his answer returns, grade it strictly against this text — never revise the commitment after seeing his words, and never mark a wrong answer right to be kind. It is shown to him on submit; your next reply grades the nuance of what he wrote."
+          },
+          "details": {
+            "type": "string",
+            "description": "Optional extra context or instructions shown under the question."
+          }
+        }
+      }
+    },
+    {
+      "name": "ask_user_question",
+      "description": "Ask the learner a single question and pause until they answer. NOT graded — there is no correct answer. Use when requirements are ambiguous, preferences are needed, a decision would materially affect the lesson, or you need an open-ended response. ONE question per turn: call a single ask_user_question, then end your turn — his answer determines the next.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "properties": {
+          "question": {
+            "type": "string",
+            "description": "The single question to ask the learner. ONE question per turn: ask, then end your turn — the answer determines the next question."
+          },
+          "details": {
+            "type": "string",
+            "description": "Optional extra context or instructions shown under the question."
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "label"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Display label for the answer option — a bare claim, no reasoning"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Optional machine-readable value returned for the option. Defaults to the label."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Optional extra detail shown below the option"
+                }
+              }
+            },
+            "minItems": 2,
+            "description": "Optional multiple-choice options. Omit for free-form text input. The learner can always choose 'Other' and type a custom answer when options are provided."
+          },
+          "multiSelect": {
+            "type": "boolean",
+            "description": "Set to true to allow multiple answers to the same question."
+          }
+        }
+      }
+    }
+  ],
+  "texts": {
+    "questionPosed": "Question posed — the turn ends here; the learner's graded answer arrives as this call's result.",
+    "interrupted": "The question was interrupted — the learner never answered; continue without holding a result for it."
+  }
+}

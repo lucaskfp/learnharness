@@ -1,0 +1,104 @@
+package io.github.lucaskfp.learnharness.engine
+
+import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
+import io.github.lucaskfp.learnharness.engine.model.ContentBlock
+import io.github.lucaskfp.learnharness.engine.model.LhJson
+import io.github.lucaskfp.learnharness.engine.model.LhMessage
+import io.github.lucaskfp.learnharness.engine.model.StopReason
+import io.github.lucaskfp.learnharness.engine.model.TextContent
+import io.github.lucaskfp.learnharness.engine.model.ThinkingContent
+import io.github.lucaskfp.learnharness.engine.model.ToolCall
+import io.github.lucaskfp.learnharness.engine.model.ToolResultMessage
+import io.github.lucaskfp.learnharness.engine.model.UserMessage
+import io.github.lucaskfp.learnharness.engine.question.ArmedQuestion
+import io.github.lucaskfp.learnharness.engine.question.QuestionAnswerData
+import io.github.lucaskfp.learnharness.engine.question.QuestionTools
+import io.github.lucaskfp.learnharness.engine.question.armQuestion
+
+/** What the UI shows of a saved history: the transcript, and the question waiting, if any. */
+internal data class Projection(val transcript: List<TranscriptEntry>, val pending: ArmedQuestion?)
+
+/**
+ * Derives the transcript and the pending question from the saved history (the history is the one
+ * source of truth, so a Session resumes mid-question for free).
+ *
+ * A question is pending when the newest assistant message posed it, finished cleanly and nothing
+ * has answered it. A question call that failed validation has an error result and is not shown.
+ */
+internal fun project(messages: List<LhMessage>): Projection {
+    val results = messages.filterIsInstance<ToolResultMessage>().associateBy { it.toolCallId }
+    val newestAssistant = messages.indexOfLast { it is AssistantMessage }
+    val transcript = mutableListOf<TranscriptEntry>()
+    var pending: ArmedQuestion? = null
+    messages.forEachIndexed { index, message ->
+        when (message) {
+            is UserMessage -> transcript += TranscriptEntry.Learner(message.content)
+            is ToolResultMessage -> Unit
+            is AssistantMessage -> {
+                for (block in message.content) {
+                    when (block) {
+                        is TextContent -> if (block.text.isNotBlank()) transcript += TranscriptEntry.AgentText(block.text)
+                        is ThinkingContent -> if (block.redacted != true && block.thinking.isNotBlank()) {
+                            transcript += TranscriptEntry.Reasoning(block.thinking)
+                        }
+                        is ToolCall -> {
+                            if (block.name !in QuestionTools) continue
+                            val result = results[block.id]
+                            if (result == null) {
+                                val posed = index == newestAssistant && message.stopReason == StopReason.ToolUse
+                                if (posed && pending == null) pending = armQuestion(block.id, block.name, block.arguments)
+                            } else if (!result.isError) {
+                                answerOf(result)?.let { transcript += TranscriptEntry.Answered(it) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return Projection(transcript, pending)
+}
+
+private fun answerOf(result: ToolResultMessage): QuestionAnswerData? = try {
+    result.details?.let { LhJson.decodeFromJsonElement(QuestionAnswerData.serializer(), it) }
+} catch (_: Exception) {
+    null
+}
+
+/** The partial output of a Turn in flight, as transcript entries. */
+internal fun liveEntries(blocks: List<ContentBlock>): List<TranscriptEntry> = blocks.mapNotNull { block ->
+    when (block) {
+        is TextContent -> block.text.takeIf { it.isNotBlank() }?.let(TranscriptEntry::AgentText)
+        is ThinkingContent -> block.thinking.takeIf { it.isNotBlank() && block.redacted != true }
+            ?.let(TranscriptEntry::Reasoning)
+        is ToolCall -> null
+    }
+}
+
+/**
+ * The history as a provider should read it (upstream `toLlmMessages`): failed generations are
+ * dropped, and a question call nobody answered gets the interrupted result the protocol demands.
+ */
+internal fun toLlmMessages(messages: List<LhMessage>, interruptedText: String, now: Long): List<LhMessage> {
+    val out = mutableListOf<LhMessage>()
+    messages.forEachIndexed { index, message ->
+        if (message is AssistantMessage && (message.stopReason == StopReason.Error || message.stopReason == StopReason.Aborted)) {
+            return@forEachIndexed
+        }
+        out += message
+        if (message is AssistantMessage) {
+            val answered = messages.drop(index + 1).filterIsInstance<ToolResultMessage>().map { it.toolCallId }.toSet()
+            message.toolCalls.filter { it.id !in answered }.forEach { call ->
+                out += ToolResultMessage(
+                    id = "interrupted_${call.id}",
+                    toolCallId = call.id,
+                    toolName = call.name,
+                    content = listOf(TextContent(interruptedText)),
+                    isError = false,
+                    timestamp = now,
+                )
+            }
+        }
+    }
+    return out
+}

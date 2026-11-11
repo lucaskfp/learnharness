@@ -135,7 +135,7 @@ private fun ExpandedDock(question: PendingQuestion, deepThinking: Boolean, event
     ) {
         KindTag(question)
         Text(question.text, style = MaterialTheme.typography.titleMedium)
-        if (question.kind.freeRecall) {
+        if (question.freeText) {
             // As on desktop, free recall carries no confidence: the answer in the learner's own
             // words is the evidence.
             OutlinedTextField(
@@ -150,15 +150,17 @@ private fun ExpandedDock(question: PendingQuestion, deepThinking: Boolean, event
                 question.options.forEachIndexed { i, option ->
                     QuizOption(option, onClick = { onSelect(i) })
                 }
-                QuizOption(
-                    QuestionOption(
-                        stringResource(R.string.i_dont_know),
-                        if (question.dontKnow) OptionState.Selected else OptionState.Idle,
-                    ),
-                    onClick = onDontKnow,
-                )
+                if (question.kind.graded) {
+                    QuizOption(
+                        QuestionOption(
+                            stringResource(R.string.i_dont_know),
+                            if (question.dontKnow) OptionState.Selected else OptionState.Idle,
+                        ),
+                        onClick = onDontKnow,
+                    )
+                }
             }
-            ConfidenceSlider(question.confidenceIndex, onConfidenceChange)
+            if (question.kind.graded) ConfidenceSlider(question.confidenceIndex, onConfidenceChange)
         }
         OutlinedTextField(
             value = question.thinking,

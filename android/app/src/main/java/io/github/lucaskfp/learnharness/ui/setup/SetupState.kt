@@ -33,6 +33,8 @@ data class SetupState(
     /** The provider's models, known once the key has been tested. */
     val models: List<String> = emptyList(),
     val roleModels: Map<ModelRole, String> = emptyMap(),
+    /** The chosen provider cannot be used yet, whatever the key. */
+    val providerUnavailable: Boolean = false,
 ) {
     val canContinue: Boolean get() = keyStatus == KeyStatus.Valid
 
