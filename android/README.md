@@ -4,6 +4,10 @@ A native Android version of [LearnHarness](../README.md): Kotlin, Jetpack Compos
 
 This is a scaffold so far: the app opens into a navigation shell with three empty destinations (Sessions, Graph, Settings). The first screens exist as mockups only: stateless composables rendered from fake data in `@Preview`s (Setup, Sessions, New Session, and a Teaching Session through Probe, Plan and Teach; see `ui/setup`, `ui/sessions`, `ui/newsession`, `ui/teaching`, `ui/preview/FakeData.kt` and `ui/preview/FakeTeaching.kt`). The fake learner and agent content (Session goals, file names, questions, explanations) is in `fake_*` string resources, so each locale's mockups show it in that language.
 
+## Mockups
+
+The mockups of the nine screens are designed in FigCraft, in [mockups/learnharness.figcraft](mockups/learnharness.figcraft), with one page per flow (Setup, Sessions, New Session, Teaching Session, Practice, Graph, Settings) after a read-me and a foundations page. Each state is a section with four frames: Light/Dark by EN/PT-BR. Colors are variables in a `Tema` collection (Light/Dark modes) and every string is a variable in an `Idioma` collection (EN/PT-BR modes), so each screen is built once and its copies only switch modes. A PNG of each state is exported to [mockups/png/](mockups/png/). The Compose previews below were the first mockups of Setup, Sessions, New Session and the Teaching Session (#3, #4); they stay as starting code and screenshot baselines.
+
 ## Requirements
 
 - JDK 17
