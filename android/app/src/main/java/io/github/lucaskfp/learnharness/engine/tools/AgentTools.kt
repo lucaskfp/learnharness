@@ -51,14 +51,14 @@ data class ToolOutcome(
  */
 class AgentTools(private val contracts: ToolContracts, mechanics: QuizMechanics = QuizMechanics.Choice) {
     private val prober = listOf(
-        contracts.spec(if (mechanics == QuizMechanics.Choice) "probe" else "recall"),
-        contracts.spec("ask_user_question"),
-        contracts.spec("probe_done"),
+        contracts.spec(if (mechanics == QuizMechanics.Choice) ToolNames.Probe else ToolNames.Recall),
+        contracts.spec(ToolNames.Ask),
+        contracts.spec(ToolNames.ProbeDone),
     )
     private val teacher = listOf(
-        contracts.spec(if (mechanics == QuizMechanics.Choice) "quiz" else "explain"),
-        contracts.spec("ask_user_question"),
-        contracts.spec("plan_init"),
+        contracts.spec(if (mechanics == QuizMechanics.Choice) ToolNames.Quiz else ToolNames.Explain),
+        contracts.spec(ToolNames.Ask),
+        contracts.spec(ToolNames.PlanInit),
     )
 
     fun specs(kind: AgentKind): List<ToolSpec> = if (kind == AgentKind.Prober) prober else teacher
@@ -77,19 +77,19 @@ class AgentTools(private val contracts: ToolContracts, mechanics: QuizMechanics 
             return ToolOutcome(SchemaValidator.errorText(call.name, problems, call.arguments), isError = true)
         }
         return when (call.name) {
-            "probe_done" -> probeDone(history)
-            "plan_init" -> planInit(arguments)
+            ToolNames.ProbeDone -> probeDone(history)
+            ToolNames.PlanInit -> planInit(arguments)
             else -> question(call.name, arguments, history)
         }
     }
 
     private fun question(tool: String, arguments: JsonObject, history: List<LhMessage>): ToolOutcome {
         val authoring = when (tool) {
-            "probe" -> quizInputProblems(arguments)
-            "recall" -> explainInputProblems(arguments)
+            ToolNames.Probe -> quizInputProblems(arguments)
+            ToolNames.Recall -> explainInputProblems(arguments)
             // The Teacher's questions name the Plan node they are about, checked against the live Plan.
-            "quiz" -> quizInputProblems(arguments) + listOfNotNull(nodeIdProblem(arguments, history))
-            "explain" -> explainInputProblems(arguments) + listOfNotNull(nodeIdProblem(arguments, history))
+            ToolNames.Quiz -> quizInputProblems(arguments) + listOfNotNull(nodeIdProblem(arguments, history))
+            ToolNames.Explain -> explainInputProblems(arguments) + listOfNotNull(nodeIdProblem(arguments, history))
             else -> askOptionProblems(arguments["options"])
         }
         if (authoring.isNotEmpty()) return invalidInput(tool, authoring)

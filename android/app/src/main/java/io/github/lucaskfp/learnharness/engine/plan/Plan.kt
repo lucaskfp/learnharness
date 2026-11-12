@@ -1,5 +1,6 @@
 package io.github.lucaskfp.learnharness.engine.plan
 
+import io.github.lucaskfp.learnharness.engine.tools.ToolNames
 import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.LhJson
 import io.github.lucaskfp.learnharness.engine.model.LhMessage
@@ -191,7 +192,7 @@ fun derivePlanPosition(tree: PlanTree, messages: List<LhMessage>): PlanPosition 
     for (message in messages) {
         if (message !is AssistantMessage) continue
         for (call in message.toolCalls) {
-            if (call.name != "quiz" && call.name != "explain") continue
+            if (call.name !in ToolNames.NodeTagged) continue
             val nodeId = call.arguments["nodeId"]?.jsonPrimitive?.contentOrNull ?: continue
             if (nodeId !in ids) continue
             if (stays.lastOrNull() != nodeId) stays += nodeId
@@ -203,7 +204,7 @@ fun derivePlanPosition(tree: PlanTree, messages: List<LhMessage>): PlanPosition 
 /** The tree of the latest successful `plan_init` result: replacing the Plan is calling it again. */
 fun latestPlanTree(messages: List<LhMessage>): PlanTree? =
     messages.filterIsInstance<ToolResultMessage>()
-        .lastOrNull { it.toolName == "plan_init" && !it.isError && planOk(it) }
+        .lastOrNull { it.toolName == ToolNames.PlanInit && !it.isError && planOk(it) }
         ?.let(::planTreeOf)
 
 private fun planOk(result: ToolResultMessage): Boolean =

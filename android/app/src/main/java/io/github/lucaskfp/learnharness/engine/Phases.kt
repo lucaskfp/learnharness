@@ -1,5 +1,6 @@
 package io.github.lucaskfp.learnharness.engine
 
+import io.github.lucaskfp.learnharness.engine.tools.ToolNames
 import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.LhMessage
 import io.github.lucaskfp.learnharness.engine.model.StopReason
@@ -27,8 +28,8 @@ internal fun probeDoneResultIds(messages: List<LhMessage>): Set<String> {
     for (message in messages) {
         if (message is AssistantMessage) {
             if (message.stopReason == StopReason.Error || message.stopReason == StopReason.Aborted) continue
-            message.toolCalls.filter { it.name == "probe_done" }.forEach { calls += it.id }
-        } else if (message is ToolResultMessage && message.toolName == "probe_done" && message.toolCallId in calls && !message.isError) {
+            message.toolCalls.filter { it.name == ToolNames.ProbeDone }.forEach { calls += it.id }
+        } else if (message is ToolResultMessage && message.toolName == ToolNames.ProbeDone && message.toolCallId in calls && !message.isError) {
             val ok = (message.details as? JsonObject)?.get("ok")?.jsonPrimitive?.booleanOrNull
             if (ok != false) results += message.id
         }
@@ -59,12 +60,12 @@ internal fun hasUnresolvedQuestion(messages: List<LhMessage>): Boolean {
 internal fun teachingStartIndex(messages: List<LhMessage>): Int? {
     var tree: PlanTree? = null
     messages.forEachIndexed { index, message ->
-        if (message is ToolResultMessage && message.toolName == "plan_init") {
+        if (message is ToolResultMessage && message.toolName == ToolNames.PlanInit) {
             latestPlanTree(messages.subList(0, index + 1))?.let { tree = it }
         } else if (message is AssistantMessage) {
             val ids = tree?.nodes?.map { it.id }.orEmpty()
             val tagged = message.toolCalls.any { call ->
-                (call.name == "quiz" || call.name == "explain") &&
+                call.name in ToolNames.NodeTagged &&
                     call.arguments["nodeId"]?.jsonPrimitive?.contentOrNull in ids
             }
             if (tagged) return index

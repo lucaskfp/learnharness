@@ -51,6 +51,8 @@ data class PendingQuestionView(
     val options: List<QuizOption>,
     val multiSelect: Boolean,
     val freeText: Boolean,
+    /** The Teacher quiz's role, `predict` or `check`; null for other questions. */
+    val questionType: String? = null,
 )
 
 /** The Plan as the learner sees it: the Teacher's lesson map and where the lesson stands on it. */

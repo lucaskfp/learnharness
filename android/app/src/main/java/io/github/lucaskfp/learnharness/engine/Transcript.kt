@@ -1,5 +1,6 @@
 package io.github.lucaskfp.learnharness.engine
 
+import io.github.lucaskfp.learnharness.engine.tools.ToolNames
 import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.ContentBlock
 import io.github.lucaskfp.learnharness.engine.model.LhJson
@@ -39,7 +40,7 @@ internal fun project(messages: List<LhMessage>): Projection {
         when (message) {
             is UserMessage -> transcript += TranscriptEntry.Learner(message.content)
             is MarkerMessage -> Unit
-            is ToolResultMessage -> if (message.toolName == "plan_init") {
+            is ToolResultMessage -> if (message.toolName == ToolNames.PlanInit) {
                 // Each successful plan_init is a snapshot, so a replacement is visible; the first opens the Planning seam.
                 val tree = latestPlanTree(listOf(message))
                 if (tree != null) {

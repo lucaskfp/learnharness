@@ -71,7 +71,12 @@ data class MarkerMessage(
     val display: Boolean = true,
     val details: JsonElement? = null,
     override val timestamp: Long,
-) : LhMessage
+) : LhMessage {
+    companion object {
+        /** The wake that starts the Teacher once the probe has concluded. */
+        const val ProbeHandoff = "probe-handoff"
+    }
+}
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable

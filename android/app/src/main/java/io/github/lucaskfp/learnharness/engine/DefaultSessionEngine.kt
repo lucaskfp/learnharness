@@ -150,7 +150,7 @@ class DefaultSessionEngine(
                 transcript = projection.transcript + liveEntries(liveNow[sessionId].orEmpty()),
                 // The learner answers between Turns, never during one.
                 pendingQuestion = if (turnRunning) null else projection.pending?.let {
-                    PendingQuestionView(it.toolCallId, it.tool, it.kind, it.question, it.details, it.options, it.multiSelect, it.freeText)
+                    PendingQuestionView(it.toolCallId, it.tool, it.kind, it.question, it.details, it.options, it.multiSelect, it.freeText, it.questionType)
                 },
                 turnRunning = turnRunning,
                 error = (messages.lastOrNull() as? AssistantMessage)?.takeIf { it.stopReason == StopReason.Error }?.errorMessage,
@@ -161,11 +161,20 @@ class DefaultSessionEngine(
     override fun sessions(): Flow<List<SessionSummary>> = revision.map {
         val runningNow = running.value
         database.sessions().all().map {
-            SessionSummary(it.id, it.title, SessionKind.valueOf(it.kind), phaseOf(loadHistory(it.id)), it.updatedAt, it.id in runningNow)
+            SessionSummary(it.id, it.title, SessionKind.valueOf(it.kind), phaseCached(it), it.updatedAt, it.id in runningNow)
         }
     }.distinctUntilChanged()
 
+    /** Phases by Session, keyed to the `updatedAt` they were read at: the list reloads a history only when it changed. */
+    private val phases = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, SessionPhase>>()
+
+    private suspend fun phaseCached(row: SessionRow): SessionPhase {
+        phases[row.id]?.takeIf { it.first == row.updatedAt }?.let { return it.second }
+        return phaseOf(loadHistory(row.id)).also { phases[row.id] = row.updatedAt to it }
+    }
+
     override suspend fun delete(sessionId: String) {
+        phases.remove(sessionId)
         database.sessions().delete(sessionId)
         revision.value++
     }
@@ -200,6 +209,18 @@ class DefaultSessionEngine(
                 // probe_done the Prober still finishes its Turn (its closing sentence), and the
                 // Teacher takes over from the next stretch.
                 val kind = agentFor(history)
+                if (kind == AgentKind.Teacher && history.none { it is MarkerMessage && it.customType == MarkerMessage.ProbeHandoff }) {
+                    // Also covers a handoff cut short (a failed closing call): the Teacher is then
+                    // woken by the learner's next input.
+                    val handoff = MarkerMessage(
+                        id = "steer_probe_$sessionId",
+                        customType = MarkerMessage.ProbeHandoff,
+                        content = contracts.texts.probeHandoff,
+                        timestamp = environment.clock(),
+                    )
+                    produced += handoff
+                    history = history + handoff
+                }
                 val system = if (kind == AgentKind.Prober) prompts.prober(language) else prompts.teacher(language)
                 var posedQuestion = false
                 while (true) {
@@ -236,20 +257,12 @@ class DefaultSessionEngine(
                     }
                     if (posedQuestion) break
                 }
-                // Handoff: a Prober stretch that concluded the probe and ended cleanly wakes the
-                // Teacher at once, so the learner goes from assessment to Plan without prompting.
+                // A Prober stretch that concluded the probe and ended cleanly wakes the Teacher at
+                // once, so the learner goes from assessment to Plan without prompting.
                 val ended = history.last()
                 val concluded = kind == AgentKind.Prober && !posedQuestion && hasProbeDone(history) &&
                     ended is AssistantMessage && ended.stopReason == StopReason.Stop
                 if (!concluded) break
-                val handoff = MarkerMessage(
-                    id = "steer_probe_$sessionId",
-                    customType = "probe-handoff",
-                    content = contracts.texts.probeHandoff,
-                    timestamp = environment.clock(),
-                )
-                produced += handoff
-                history = history + handoff
             }
         } catch (e: CancellationException) {
             throw e

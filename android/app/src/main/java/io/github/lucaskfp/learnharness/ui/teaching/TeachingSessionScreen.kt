@@ -211,12 +211,14 @@ private fun PlanPane(plan: Plan, modifier: Modifier = Modifier) {
     Column(
         modifier
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(top = 16.dp),
         horizontalAlignment = Alignment.Start,
     ) {
-        Text(pluralStringResource(R.plurals.plan_node_count, plan.nodes.size, plan.nodes.size), style = MaterialTheme.typography.titleMedium)
-        PlanGraph(plan, Modifier.fillMaxWidth())
+        Text(
+            pluralStringResource(R.plurals.plan_node_count, plan.nodes.size, plan.nodes.size),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        ZoomablePlan(plan, Modifier.fillMaxWidth().weight(1f))
     }
 }

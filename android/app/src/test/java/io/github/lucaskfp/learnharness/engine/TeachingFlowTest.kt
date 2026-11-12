@@ -114,6 +114,22 @@ class TeachingFlowTest {
         assertEquals(SessionPhase.Planning, view.phase)
     }
 
+    @Test
+    fun aHandoffInterruptedByAFailedClosingCallStillWakesTheTeacherOnTheLearnersNextInput() {
+        provider.reply(toolCall("pd_1", "probe_done", assessment))
+        provider.replyWith { throw io.github.lucaskfp.learnharness.engine.provider.ProviderException("Overloaded", status = 529) }
+        provider.reply(toolCall("plan_1", "plan_init", planInitArguments(TwoNodePlan)))
+        provider.reply(text("Here is the plan."))
+
+        val id = harness.startTeaching()
+        harness.settled(id)
+        runBlocking { harness.engine.submit(id, LearnerInput.Message("Please continue")) }
+        harness.awaitView(id) { !it.turnRunning && it.plan != null }
+
+        val users = provider.requests[2].messages.filterIsInstance<io.github.lucaskfp.learnharness.engine.model.UserMessage>()
+        assertTrue(users.any { "call plan_init" in it.content })
+    }
+
     // ─── the Plan ───────────────────────────────────────────────────────────────────────
 
     @Test
@@ -302,5 +318,97 @@ class TeachingFlowTest {
         val view = harness.awaitView(id) { it.pendingQuestion != null }
 
         assertEquals(setOf("a", "b"), view.pendingQuestion!!.options.map { it.value }.toSet())
+    }
+
+    @Test
+    fun underFreeRecallTheTeacherAsksExplainTaggedWithAPlanNode() {
+        val recall = EngineHarness(mechanics = io.github.lucaskfp.learnharness.engine.tools.QuizMechanics.FreeRecall)
+        try {
+            recall.provider.reply(toolCall("pd_1", "probe_done", assessment))
+            recall.provider.reply(text("Over to the plan."))
+            recall.provider.reply(toolCall("plan_1", "plan_init", planInitArguments(TwoNodePlan)))
+            recall.provider.reply(text("Here is the plan."))
+            recall.provider.reply(
+                toolCall(
+                    "ex_1", "explain",
+                    buildJsonObject {
+                        put("type", "check")
+                        put("nodeId", "slope")
+                        put("question", "Explain what a slope measures.")
+                        put("correctAnswer", "How much the output changes per unit of input.")
+                    },
+                ),
+            )
+            recall.provider.reply(text("Close enough."))
+
+            val id = recall.startTeaching()
+            recall.settled(id)
+            runBlocking { recall.engine.submit(id, LearnerInput.Message("Start")) }
+            val asked = recall.awaitView(id) { it.pendingQuestion != null }
+
+            val teacherTools = recall.provider.requests[2].tools.map { it.name }
+            assertTrue("explain" in teacherTools && "quiz" !in teacherTools)
+            assertTrue(asked.pendingQuestion!!.freeText)
+            assertEquals("slope", asked.plan!!.current)
+            assertEquals(SessionPhase.Teaching, asked.phase)
+
+            runBlocking { recall.engine.submit(id, LearnerInput.Answer("ex_1", AnswerRequest(text = "Rise over run"))) }
+            val answered = recall.settled(id).transcript.filterIsInstance<TranscriptEntry.Answered>().single().data
+            assertEquals("Rise over run", answered.text)
+            assertEquals("How much the output changes per unit of input.", answered.committed)
+        } finally {
+            recall.close()
+        }
+    }
+
+    @Test
+    fun theTeachersReasoningIsKeptInTheTranscriptWhenTheModelExposesIt() {
+        scriptHandoff()
+        provider.reply(*thinking("Two strands; slope first.", signature = "sig").toTypedArray(), toolCall("plan_1", "plan_init", planInitArguments(TwoNodePlan)))
+        provider.reply(text("Here is the plan."))
+
+        val id = harness.startTeaching()
+        val view = harness.awaitView(id) { !it.turnRunning && it.plan != null }
+
+        assertTrue(TranscriptEntry.Reasoning("Two strands; slope first.") in view.transcript)
+    }
+
+    @Test
+    fun theLearnersReplyToThePlanReachesTheTeacher() {
+        teachWithPlan()
+        provider.reply(text("Good, let us begin."))
+
+        val id = harness.startTeaching()
+        harness.awaitView(id) { !it.turnRunning && it.plan != null }
+        runBlocking { harness.engine.submit(id, LearnerInput.Message("Looks right to me")) }
+        harness.settled(id)
+
+        val last = provider.requests.last()
+        assertTrue("plan_init" in last.tools.map { it.name })
+        assertEquals(
+            "Looks right to me",
+            last.messages.filterIsInstance<io.github.lucaskfp.learnharness.engine.model.UserMessage>().last().content,
+        )
+    }
+
+    @Test
+    fun aPredictionKeepsItsQuestionTypeThroughTheAnswer() {
+        teachWithPlan()
+        val predict = buildJsonObject {
+            quizArguments("slope", "Guess: what does a slope measure?", slopeOptions, correct = "a").forEach { (k, v) -> put(k, v) }
+            put("type", "predict")
+        }
+        provider.reply(toolCall("quiz_1", "quiz", predict))
+        provider.reply(text("Let us see why."))
+
+        val id = harness.startTeaching()
+        harness.settled(id)
+        runBlocking { harness.engine.submit(id, LearnerInput.Message("Start")) }
+        val asked = harness.awaitView(id) { it.pendingQuestion != null }
+        assertEquals("predict", asked.pendingQuestion!!.questionType)
+
+        answer(id, "quiz_1", "a")
+        val answered = harness.settled(id).transcript.filterIsInstance<TranscriptEntry.Answered>().single().data
+        assertEquals("predict", answered.questionType)
     }
 }

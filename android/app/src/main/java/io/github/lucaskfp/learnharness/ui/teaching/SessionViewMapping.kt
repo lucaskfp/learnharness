@@ -5,6 +5,7 @@ import io.github.lucaskfp.learnharness.engine.PlanView
 import io.github.lucaskfp.learnharness.engine.SessionPhase as EnginePhase
 import io.github.lucaskfp.learnharness.engine.SessionView
 import io.github.lucaskfp.learnharness.engine.TranscriptEntry
+import io.github.lucaskfp.learnharness.engine.tools.ToolNames
 import io.github.lucaskfp.learnharness.engine.question.QuestionAnswerData
 import io.github.lucaskfp.learnharness.engine.question.QuestionKind as EngineKind
 import io.github.lucaskfp.learnharness.ui.sessions.SessionPhase
@@ -65,7 +66,7 @@ private fun QuestionAnswerData.toItem(): TranscriptItem.AnsweredQuestion {
     val chosen = answers.map { it.index }.toSet()
     val correct = correctIndices.orEmpty().toSet()
     return TranscriptItem.AnsweredQuestion(
-        kind = uiKind(tool),
+        kind = uiKind(tool, questionType),
         text = questionText,
         options = options.orEmpty().map { option ->
             val state = when {
@@ -84,7 +85,7 @@ private fun QuestionAnswerData.toItem(): TranscriptItem.AnsweredQuestion {
 }
 
 private fun PendingQuestionView.toPending(draft: QuestionDraft) = PendingQuestion(
-    kind = uiKind(tool),
+    kind = uiKind(tool, questionType),
     text = text,
     options = options.map { QuestionOption(it.label, if (it.value in draft.selected) OptionState.Selected else OptionState.Idle) },
     confidenceIndex = draft.confidenceIndex,
@@ -96,9 +97,9 @@ private fun PendingQuestionView.toPending(draft: QuestionDraft) = PendingQuestio
 )
 
 /** Upstream's question tools, by the kind the dock and the answered cards label them with. */
-private fun uiKind(tool: String?): QuestionKind = when (tool) {
-    "probe" -> QuestionKind.Probe
-    "recall" -> QuestionKind.Recall
-    "ask_user_question" -> QuestionKind.Ask
-    else -> QuestionKind.Check
+private fun uiKind(tool: String?, questionType: String?): QuestionKind = when (tool) {
+    ToolNames.Probe -> QuestionKind.Probe
+    ToolNames.Recall -> QuestionKind.Recall
+    ToolNames.Ask -> QuestionKind.Ask
+    else -> if (questionType == "predict") QuestionKind.Prediction else QuestionKind.Check
 }

@@ -54,6 +54,8 @@ data class ArmedQuestion(
     /** The model's committed answer (explain only). */
     val committedAnswer: String?,
     val explanation: String?,
+    /** The Teacher quiz's role in the cycle, `predict` or `check` (upstream `questionType`). Null elsewhere. */
+    val questionType: String? = null,
 ) {
     /** Free text instead of options: explain, and ask without options. */
     val freeText: Boolean get() = kind == QuestionKind.Explain || (kind == QuestionKind.Ask && options.isEmpty())
@@ -70,6 +72,8 @@ data class OptionSnapshot(val index: Int, val label: String)
 data class QuestionAnswerData(
     val kind: QuestionKind,
     val tool: String? = null,
+    /** The Teacher quiz's role, `predict` or `check`; absent on Prober questions. */
+    val questionType: String? = null,
     val questionText: String,
     val options: List<OptionSnapshot>? = null,
     val dontKnow: Boolean = false,
@@ -260,6 +264,13 @@ fun isCorrect(selected: List<Int>, correct: List<Int>): Boolean =
  * the call id, so the order is stable across reloads but differs per question.
  * Returns null for a call that is not a gradeable question.
  */
+/** Upstream's `normalizeQuizType`: `predict` or `check`, anything else is no type. */
+fun normalizeQuizType(raw: String?): String? = when (raw?.trim()?.trim('"', '`')?.lowercase()) {
+    "predict" -> "predict"
+    "check" -> "check"
+    else -> null
+}
+
 fun armQuestion(toolCallId: String, tool: String, input: JsonObject): ArmedQuestion? {
     val question = input["question"]?.jsonPrimitive?.contentOrNull ?: return null
     val details = input["details"]?.jsonPrimitive?.contentOrNull
@@ -274,6 +285,7 @@ fun armQuestion(toolCallId: String, tool: String, input: JsonObject): ArmedQuest
                     correctIndices = resolveCorrect(input["correctAnswer"], options),
                     committedAnswer = null,
                     explanation = input["explanation"]?.jsonPrimitive?.contentOrNull,
+                    questionType = normalizeQuizType(input["type"]?.jsonPrimitive?.contentOrNull),
                 )
             }
             QuestionKind.Explain -> ArmedQuestion(
@@ -301,6 +313,7 @@ fun buildAnswer(armed: ArmedQuestion, request: AnswerRequest, answeredAt: String
     var data = QuestionAnswerData(
         kind = armed.kind,
         tool = armed.tool,
+        questionType = armed.questionType,
         questionText = armed.question,
         options = armed.options.mapIndexed { i, o -> OptionSnapshot(i + 1, o.label) },
         dontKnow = dontKnow,

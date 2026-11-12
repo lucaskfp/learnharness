@@ -50,36 +50,42 @@ fun PlanScreen(plan: Plan, modifier: Modifier = Modifier, onClose: () -> Unit = 
             )
         },
     ) { padding ->
-        // Pinch to zoom, drag to pan; both survive the Plan changing under the learner.
-        var scale by remember { mutableFloatStateOf(1f) }
-        var offset by remember { mutableStateOf(Offset.Zero) }
-        Box(
+        ZoomablePlan(plan, Modifier.fillMaxSize().padding(padding))
+    }
+}
+
+/**
+ * The Plan graph with pinch to zoom and drag to pan, used full screen on phones and beside the
+ * lesson on wide windows. The view survives the Plan changing under the learner.
+ */
+@Composable
+fun ZoomablePlan(plan: Plan, modifier: Modifier = Modifier) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    Box(
+        modifier
+            .clipToBounds()
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, pan, zoom, _ ->
+                    val next = (scale * zoom).coerceIn(MinZoom, MaxZoom)
+                    // Keep the point under the fingers fixed while zooming.
+                    offset = (offset - centroid) * (next / scale) + centroid + pan
+                    scale = next
+                }
+            },
+    ) {
+        PlanGraph(
+            plan,
             Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .clipToBounds()
-                .pointerInput(Unit) {
-                    detectTransformGestures { centroid, pan, zoom, _ ->
-                        val next = (scale * zoom).coerceIn(MinZoom, MaxZoom)
-                        // Keep the point under the fingers fixed while zooming.
-                        offset = (offset - centroid) * (next / scale) + centroid + pan
-                        scale = next
-                    }
-                },
-        ) {
-            PlanGraph(
-                plan,
-                Modifier
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = offset.x
-                        translationY = offset.y
-                        transformOrigin = TransformOrigin(0f, 0f)
-                    }
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            )
-        }
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    translationX = offset.x
+                    translationY = offset.y
+                    transformOrigin = TransformOrigin(0f, 0f)
+                }
+                .fillMaxWidth()
+                .padding(16.dp),
+        )
     }
 }
