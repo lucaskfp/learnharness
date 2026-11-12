@@ -11,7 +11,10 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.lucaskfp.learnharness.app.AppContainer
 
-/** A Teaching Session wired to the Session engine: the transcript, the pending question and the composer. */
+/**
+ * A Session wired to the Session engine: the transcript, and at the bottom the pending question,
+ * the active practice problem or the composer.
+ */
 @Composable
 fun SessionRoute(container: AppContainer, sessionId: String, onBack: () -> Unit) {
     val viewModel: SessionViewModel = viewModel(
@@ -36,6 +39,10 @@ fun SessionRoute(container: AppContainer, sessionId: String, onBack: () -> Unit)
                 onSend = viewModel::onSend,
                 onStopTurn = viewModel::onStopTurn,
                 onRetry = viewModel::onRetry,
+                onToggleProblem = viewModel::onToggleProblem,
+                onProblemThinkingChange = viewModel::onProblemThinkingChange,
+                onSubmitThinking = viewModel::onSubmitThinking,
+                onNextProblem = viewModel::onNextProblem,
             )
         }
     }

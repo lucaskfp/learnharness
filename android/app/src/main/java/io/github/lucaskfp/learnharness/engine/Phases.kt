@@ -39,8 +39,15 @@ internal fun probeDoneResultIds(messages: List<LhMessage>): Set<String> {
 
 internal fun hasProbeDone(messages: List<LhMessage>): Boolean = probeDoneResultIds(messages).isNotEmpty()
 
-/** Which agent a request is built for: the Prober until the probe has concluded, then the Teacher. */
-internal fun agentFor(messages: List<LhMessage>): AgentKind = if (hasProbeDone(messages)) AgentKind.Teacher else AgentKind.Prober
+/**
+ * Which agent a request is built for: a Practice Session's Practitioner from its first Turn; in a
+ * Teaching Session the Prober until the probe has concluded, then the Teacher.
+ */
+internal fun agentFor(kind: SessionKind, messages: List<LhMessage>): AgentKind = when {
+    kind == SessionKind.Practice -> AgentKind.Practitioner
+    hasProbeDone(messages) -> AgentKind.Teacher
+    else -> AgentKind.Prober
+}
 
 /**
  * Is a question still waiting in the newest assistant message? `probe_done` is refused while one
@@ -74,7 +81,10 @@ internal fun teachingStartIndex(messages: List<LhMessage>): Int? {
     return null
 }
 
-internal fun phaseOf(messages: List<LhMessage>): SessionPhase = when {
+internal fun phaseOf(kind: SessionKind, messages: List<LhMessage>): SessionPhase =
+    if (kind == SessionKind.Practice) practicePhaseOf(messages) else teachingPhaseOf(messages)
+
+private fun teachingPhaseOf(messages: List<LhMessage>): SessionPhase = when {
     !hasProbeDone(messages) -> SessionPhase.Probing
     teachingStartIndex(messages) != null -> SessionPhase.Teaching
     else -> SessionPhase.Planning

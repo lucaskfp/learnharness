@@ -28,7 +28,6 @@ class NewSessionViewModel(
         NewSessionState(
             kind = initialKind,
             teachingLanguage = if (appLocale.language == "pt") TeachingLanguage.PortugueseBrazil else TeachingLanguage.English,
-            kindSupported = initialKind == SessionKind.Teaching,
         ),
     )
     val state: StateFlow<NewSessionState> = mutableState.asStateFlow()
@@ -57,7 +56,7 @@ class NewSessionViewModel(
     fun onKindMenuToggle(expanded: Boolean) = mutableState.update { it.copy(kindMenuExpanded = expanded) }
 
     fun onKindSelect(kind: SessionKind) {
-        mutableState.update { it.copy(kind = kind, kindMenuExpanded = false, kindSupported = kind == SessionKind.Teaching) }
+        mutableState.update { it.copy(kind = kind, kindMenuExpanded = false) }
         viewModelScope.launch { applyDefaultModel() }
     }
 
@@ -68,7 +67,10 @@ class NewSessionViewModel(
         viewModelScope.launch {
             val id = engine.start(
                 StartSession(
-                    kind = EngineKind.Teaching,
+                    kind = when (current.kind) {
+                        SessionKind.Teaching -> EngineKind.Teaching
+                        SessionKind.Practice -> EngineKind.Practice
+                    },
                     goal = current.goal,
                     model = current.model,
                     teachingLanguage = when (current.teachingLanguage) {

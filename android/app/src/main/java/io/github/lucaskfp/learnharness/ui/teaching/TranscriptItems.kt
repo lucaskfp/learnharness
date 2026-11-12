@@ -78,6 +78,10 @@ fun TranscriptEntry(
         is TranscriptItem.ImageCard -> ImageCard(item, modifier)
         is TranscriptItem.JobCard -> JobCard(item, onAbort = { onAbortJob(item) }, onOpenDemo = { onOpenDemo(item) }, modifier)
         TranscriptItem.Interrupted -> LabelledRule(stringResource(R.string.turn_interrupted), modifier)
+        is TranscriptItem.ProblemCard -> ProblemCard(item.statement, modifier)
+        is TranscriptItem.ThinkingCard -> ThinkingCard(item.text, modifier)
+        is TranscriptItem.ConcludedCard -> ConcludedCard(item, modifier)
+        TranscriptItem.NextProblemLine -> LabelledRule(stringResource(R.string.next_problem), modifier)
     }
 }
 
@@ -217,7 +221,7 @@ private fun PhaseBoundary(item: TranscriptItem.PhaseBoundary, modifier: Modifier
 
 /** A quiet system line across the transcript: a dotted rule with a label in the middle. */
 @Composable
-private fun LabelledRule(label: String, modifier: Modifier = Modifier) {
+internal fun LabelledRule(label: String, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.outline
     Row(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         DottedRule(color, Modifier.weight(1f))

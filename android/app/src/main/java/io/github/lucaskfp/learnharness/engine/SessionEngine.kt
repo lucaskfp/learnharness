@@ -12,8 +12,12 @@ import kotlinx.serialization.Serializable
 
 enum class SessionKind { Teaching, Practice }
 
-/** Where a Session stands. Teaching Sessions start in [Probing], move to [Planning] at a successful `probe_done`, and to [Teaching] at the first quiz tagged with a Plan node. */
-enum class SessionPhase { Probing, Planning, Teaching }
+/**
+ * Where a Session stands. Teaching Sessions start in [Probing], move to [Planning] at a successful
+ * `probe_done`, and to [Teaching] at the first quiz tagged with a Plan node. Practice Sessions are in
+ * [Practice] until the first problem is posed, then [ProblemOpen] or [ProblemConcluded].
+ */
+enum class SessionPhase { Probing, Planning, Teaching, Practice, ProblemOpen, ProblemConcluded }
 
 /** Everything needed to start a Session. */
 data class StartSession(
@@ -30,6 +34,15 @@ sealed interface LearnerInput {
 
     /** A free message, when no question is pending. */
     data class Message(val text: String) : LearnerInput
+
+    /**
+     * The learner's thinking on the active problem of a Practice Session. Whether it is a working
+     * trace or claims an answer is read from the text; one problem may take many.
+     */
+    data class Thinking(val problemCallId: String, val text: String) : LearnerInput
+
+    /** The learner's explicit go-ahead for the next problem, between problems of a Practice Session. */
+    data object Next : LearnerInput
 }
 
 /** One row of the Sessions list. */
@@ -94,7 +107,41 @@ sealed interface TranscriptEntry {
 
     /** Where the learner stopped a Turn: what it generated before stays above. */
     data object Interrupted : TranscriptEntry
+
+    /** A problem the Practitioner posed: its statement only; the committed solution stays hidden until it concludes. */
+    data class Problem(val toolCallId: String, val statement: String) : TranscriptEntry
+
+    /** The learner's thinking on the active problem: a working trace or a claimed answer. */
+    data class Thinking(val text: String) : TranscriptEntry
+
+    /**
+     * A concluded problem: the Practitioner's outcome and verdict, and the reveal, the solution it
+     * committed when it posed the problem. [outcome] is null for a value this version does not know.
+     */
+    data class Concluded(val outcome: ProblemOutcome?, val verdict: String, val modelSolution: String?) : TranscriptEntry
+
+    /** The learner's explicit go-ahead for the next problem. */
+    data object NextProblem : TranscriptEntry
 }
+
+/** How a problem ended, as `conclude` records it. Session evidence, never a rating in the graph. */
+enum class ProblemOutcome(val wire: String) {
+    Solved("solved"),
+    SolvedWithHints("solvedWithHints"),
+    MovedOn("movedOn"),
+    Surrendered("surrendered"),
+
+    /** Upstream's discarded problem; Android cannot discard yet, but imported Sessions may carry it. */
+    Dismissed("dismissed"),
+    ;
+
+    companion object {
+        fun of(wire: String): ProblemOutcome? = entries.firstOrNull { it.wire == wire }
+    }
+}
+
+/** The problem the learner is working on in a Practice Session: only what the learner may see. */
+data class ActiveProblemView(val toolCallId: String, val statement: String)
 
 /**
  * The failed provider response the Session ends on. [retryable] when the learner can retry it
@@ -139,6 +186,12 @@ data class SessionView(
     val failure: FailureView?,
     /** Steering messages not yet delivered to the model, oldest first. */
     val queuedSteers: List<QueuedSteer> = emptyList(),
+    /** The problem waiting for the learner's thinking, in a Practice Session. Null while a Turn runs. */
+    val activeProblem: ActiveProblemView? = null,
+    /** The learner can ask for the next problem: idle, between problems, after the first one. */
+    val nextAllowed: Boolean = false,
+    /** The latest problem has been concluded and nothing new is active: questions are about its solution. */
+    val problemConcluded: Boolean = false,
 )
 
 /** A second input arrived while a Turn was running: a Session runs one Turn at a time. */
@@ -146,6 +199,12 @@ class TurnInProgressException(sessionId: String) : IllegalStateException("A Turn
 
 /** The Session does not end on a failed response that can be retried. */
 class RetryNotAllowedException(sessionId: String) : IllegalStateException("Nothing to retry in $sessionId")
+
+/** There is no active problem with that id for the learner's thinking. */
+class NoActiveProblemException(problemCallId: String) : IllegalStateException("No active problem $problemCallId")
+
+/** Next is the go-ahead between problems: a Practice Session, nothing active, a problem posed before. */
+class NextNotAllowedException(sessionId: String) : IllegalStateException("Next is not available in $sessionId")
 
 /** There is no question with that id waiting for an answer. */
 class NoPendingQuestionException(toolCallId: String) : IllegalStateException("No pending question $toolCallId")
@@ -163,6 +222,8 @@ interface SessionEngine {
      * Saves the learner's input, then runs a Turn on it. An answer that leaves a sibling question
      * (posed in the same message) unanswered is only saved: the last answer runs the one Turn.
      * @throws TurnInProgressException if a Turn is already running in the Session.
+     * @throws NoActiveProblemException if thinking targets a problem that is not the active one.
+     * @throws NextNotAllowedException if Next comes outside the pause between practice problems.
      */
     suspend fun submit(sessionId: String, input: LearnerInput)
 

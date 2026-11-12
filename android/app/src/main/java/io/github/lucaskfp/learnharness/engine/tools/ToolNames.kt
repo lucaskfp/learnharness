@@ -9,6 +9,8 @@ object ToolNames {
     const val PlanInit = "plan_init"
     const val Quiz = "quiz"
     const val Explain = "explain"
+    const val Problem = "problem"
+    const val Conclude = "conclude"
 
     /** The Teacher's questions: the only calls that carry a Plan `nodeId`. */
     val NodeTagged = setOf(Quiz, Explain)

@@ -1,6 +1,8 @@
 package io.github.lucaskfp.learnharness.ui.teaching
 
+import io.github.lucaskfp.learnharness.engine.ActiveProblemView
 import io.github.lucaskfp.learnharness.engine.FailureView
+import io.github.lucaskfp.learnharness.engine.ProblemOutcome as EngineOutcome
 import io.github.lucaskfp.learnharness.engine.PendingQuestionView
 import io.github.lucaskfp.learnharness.engine.QueuedSteer
 import io.github.lucaskfp.learnharness.engine.PlanView
@@ -104,5 +106,81 @@ class SessionViewMappingTest {
         assertEquals(listOf("Use small numbers"), state.queuedSteers)
         assertEquals(TurnFailure("Overloaded", retryable = true), state.failure)
         assertEquals(2 to 3, state.question!!.let { it.position to it.count })
+    }
+
+    // ─── Practice ───────────────────────────────────────────────────────────────────────
+
+    private fun practice(
+        transcript: List<TranscriptEntry>,
+        phase: EnginePhase,
+        active: ActiveProblemView? = null,
+        nextAllowed: Boolean = false,
+        concluded: Boolean = false,
+        turnRunning: Boolean = false,
+    ) = SessionView(
+        id = "p",
+        goal = "Dynamic programming",
+        kind = SessionKind.Practice,
+        phase = phase,
+        transcript = transcript,
+        pendingQuestion = null,
+        turnRunning = turnRunning,
+        failure = null,
+        activeProblem = active,
+        nextAllowed = nextAllowed,
+        problemConcluded = concluded,
+    )
+
+    @Test
+    fun aPracticeTranscriptReachesTheScreenAsProblemThinkingAndConcludedCards() {
+        val transcript = listOf(
+            TranscriptEntry.Problem("p_1", "Count the ways."),
+            TranscriptEntry.Thinking("So 89."),
+            TranscriptEntry.Concluded(EngineOutcome.SolvedWithHints, "One hint.", "89 ways."),
+            TranscriptEntry.Concluded(null, "Unknown outcome.", null),
+            TranscriptEntry.NextProblem,
+        )
+
+        val state = state(practice(transcript, EnginePhase.ProblemConcluded, nextAllowed = true, concluded = true))
+
+        assertEquals(
+            listOf(
+                TranscriptItem.ProblemCard("Count the ways."),
+                TranscriptItem.ThinkingCard("So 89."),
+                TranscriptItem.ConcludedCard(ProblemOutcome.SolvedWithHints, "One hint.", "89 ways."),
+                TranscriptItem.ConcludedCard(ProblemOutcome.MovedOn, "Unknown outcome.", null),
+                TranscriptItem.NextProblemLine,
+            ),
+            state.transcript,
+        )
+        assertEquals(SessionPhase.ProblemConcluded, state.phase)
+        assertEquals(null, state.problem)
+        assertEquals(true, state.nextAllowed)
+        assertEquals(true, state.askAboutSolution)
+    }
+
+    @Test
+    fun theActiveProblemDocksWithTheLearnersDraftOfItsThinking() {
+        val active = ActiveProblemView("p_1", "Count the ways.")
+        val view = practice(listOf(TranscriptEntry.Problem("p_1", "Count the ways.")), EnginePhase.ProblemOpen, active)
+
+        val drafted = toTeachingState(
+            view, QuestionDraft(), composerText = "", expandedReasoning = emptySet(),
+            problemDraft = QuestionDraft(toolCallId = "p_1", thinking = "ways(n) = ...", collapsed = true),
+        )
+        val stale = toTeachingState(
+            view, QuestionDraft(), composerText = "", expandedReasoning = emptySet(),
+            problemDraft = QuestionDraft(toolCallId = "p_0", thinking = "old"),
+        )
+
+        assertEquals(PracticeProblem("Count the ways.", thinking = "ways(n) = ...", collapsed = true), drafted.problem)
+        assertEquals(PracticeProblem("Count the ways."), stale.problem)
+        assertEquals(SessionPhase.ProblemOpen, drafted.phase)
+        assertEquals(false, drafted.askAboutSolution)
+    }
+
+    @Test
+    fun aPracticeSessionBeforeItsFirstProblemIsLabelledPractice() {
+        assertEquals(SessionPhase.Practice, state(practice(emptyList(), EnginePhase.Practice)).phase)
     }
 }

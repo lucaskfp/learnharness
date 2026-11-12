@@ -69,6 +69,11 @@ fun TeachingSessionScreen(
     onAnswerChange: (String) -> Unit = {},
     onThinkingChange: (String) -> Unit = {},
     onSubmitAnswer: () -> Unit = {},
+    // Practice dock
+    onToggleProblem: () -> Unit = {},
+    onProblemThinkingChange: (String) -> Unit = {},
+    onSubmitThinking: () -> Unit = {},
+    onNextProblem: () -> Unit = {},
     // Composer
     onComposerTextChange: (String) -> Unit = {},
     onAttach: () -> Unit = {},
@@ -100,7 +105,16 @@ fun TeachingSessionScreen(
                     )
                 }
                 val question = state.question
-                if (question != null) {
+                val problem = state.problem
+                if (problem != null && !state.turnRunning) {
+                    PracticeDock(
+                        problem,
+                        onToggle = onToggleProblem,
+                        onThinkingChange = onProblemThinkingChange,
+                        onDictate = onDictate,
+                        onSubmit = onSubmitThinking,
+                    )
+                } else if (question != null) {
                     QuestionDock(
                         question,
                         deepThinking = state.phase == SessionPhase.Teaching,
@@ -122,6 +136,9 @@ fun TeachingSessionScreen(
                         onDictate = onDictate,
                         onSend = onSend,
                         onStop = onStopTurn,
+                        nextProblem = state.nextAllowed,
+                        askAboutSolution = state.askAboutSolution,
+                        onNext = onNextProblem,
                     )
                 }
             }

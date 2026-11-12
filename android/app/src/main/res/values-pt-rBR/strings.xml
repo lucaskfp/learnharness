@@ -39,6 +39,7 @@
     <string name="phase_probing">Sondagem</string>
     <string name="phase_planning">Planejamento</string>
     <string name="phase_teaching">Ensino</string>
+    <string name="phase_practice">Prática</string>
     <string name="problem_open">Problema em aberto</string>
     <string name="problem_concluded">Problema concluído</string>
     <string name="activity_just_now">agora mesmo</string>
@@ -180,4 +181,26 @@
     <string name="fake_t_steer_queued">Dá para mostrar com números pequenos?</string>
     <string name="fake_t_failure_reason">Overloaded (529). The provider is busy right now.</string>
     <string name="fake_t_partial">O Diffie–Hellman funciona porque os expoentes podem ser aplicados em qualquer ordem, então</string>
+
+    <!-- Practice Session -->
+    <string name="problem">Problema</string>
+    <string name="concluded">Concluído</string>
+    <string name="outcome_solved">Resolvido</string>
+    <string name="outcome_solved_with_hints">Resolvido com dicas</string>
+    <string name="outcome_surrendered">Desistiu</string>
+    <string name="outcome_moved_on">Seguiu adiante</string>
+    <string name="outcome_dismissed">Descartado</string>
+    <string name="model_solution">Solução modelo</string>
+    <string name="next_problem">Próximo problema</string>
+    <string name="submit_thinking">Enviar raciocínio</string>
+    <string name="ask_about_solution">Pergunte sobre a solução…</string>
+
+    <!-- Fake Practice Session for the mockups -->
+    <string name="fake_p_intro">Vamos colocar recorrências para trabalhar. Um problema por vez: pense em voz alta enquanto resolve.</string>
+    <string name="fake_p_statement">Uma escada tem 10 degraus. Você sobe de 1 ou 2 degraus por vez. De quantas maneiras diferentes dá para chegar ao topo?</string>
+    <string name="fake_p_thinking_1">Todo jeito de chegar ao degrau n termina com 1 passo saindo de n − 1 ou 2 passos saindo de n − 2, então ways(n) = ways(n − 1) + ways(n − 2). Não sei por onde começar a contar.</string>
+    <string name="fake_p_hint">Sua recorrência está certa. Conte os menores casos à mão: quantos jeitos chegam ao degrau 1? E ao degrau 2?</string>
+    <string name="fake_p_thinking_2">Degrau 1: um jeito. Degrau 2: dois jeitos. Depois 3, 5, 8, 13, 21, 34, 55, 89. Então 89.</string>
+    <string name="fake_p_verdict">Você encontrou a recorrência por conta própria e acertou os casos base depois de uma dica.</string>
+    <string name="fake_p_solution">O último movimento é de 1 ou de 2 degraus, então ways(n) = ways(n − 1) + ways(n − 2), com ways(1) = 1 e ways(2) = 2. Contando: 1, 2, 3, 5, 8, 13, 21, 34, 55, 89. Há 89 maneiras de chegar ao degrau 10.</string>
 </resources>

@@ -2,7 +2,10 @@ package io.github.lucaskfp.learnharness.ui.teaching
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.lucaskfp.learnharness.engine.ActiveProblemView
 import io.github.lucaskfp.learnharness.engine.AnswerDraft
+import io.github.lucaskfp.learnharness.engine.NextNotAllowedException
+import io.github.lucaskfp.learnharness.engine.NoActiveProblemException
 import io.github.lucaskfp.learnharness.engine.LearnerInput
 import io.github.lucaskfp.learnharness.engine.PendingQuestionView
 import io.github.lucaskfp.learnharness.engine.RetryNotAllowedException
@@ -29,6 +32,9 @@ import kotlinx.coroutines.launch
  */
 class SessionViewModel(private val engine: SessionEngine, private val sessionId: String) : ViewModel() {
     private val draft = MutableStateFlow(QuestionDraft())
+
+    /** The learner's thinking on the active practice problem; keyed, like answers, by the call's id. */
+    private val problemDraft = MutableStateFlow(QuestionDraft())
     private val composer = MutableStateFlow("")
     private val expandedReasoning = MutableStateFlow(emptySet<Int>())
     private val latest = MutableStateFlow<SessionView?>(null)
@@ -41,9 +47,12 @@ class SessionViewModel(private val engine: SessionEngine, private val sessionId:
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val state: StateFlow<TeachingSessionState?> =
-        combine(view, draft, composer, expandedReasoning, restored) { view, draft, composer, expanded, _ ->
+        combine(view, combine(draft, problemDraft, ::Pair), composer, expandedReasoning, restored) { view, drafts, composer, expanded, _ ->
             latest.value = view
-            view?.let { toTeachingState(it, draftFor(it.pendingQuestion, draft), composer, expanded) }
+            view?.let {
+                val (draft, problem) = drafts
+                toTeachingState(it, draftFor(it.pendingQuestion, draft), composer, expanded, problemDraftFor(it.activeProblem, problem))
+            }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     init {
@@ -63,6 +72,12 @@ class SessionViewModel(private val engine: SessionEngine, private val sessionId:
             composer.debounce(DraftDelayMs).distinctUntilChanged().collect { engine.saveComposerDraft(sessionId, it) }
         }
         viewModelScope.launch {
+            problemDraft.debounce(DraftDelayMs).distinctUntilChanged().collect { current ->
+                val toolCallId = current.toolCallId ?: return@collect
+                engine.saveAnswerDraft(sessionId, toolCallId, AnswerDraft(thinking = current.thinking))
+            }
+        }
+        viewModelScope.launch {
             draft.debounce(DraftDelayMs).distinctUntilChanged().collect { current ->
                 val toolCallId = current.toolCallId ?: return@collect
                 engine.saveAnswerDraft(sessionId, toolCallId, current.toAnswerDraft())
@@ -77,6 +92,39 @@ class SessionViewModel(private val engine: SessionEngine, private val sessionId:
         question == null -> QuestionDraft()
         current.toolCallId == question.toolCallId -> current
         else -> restored.value[question.toolCallId]?.toQuestionDraft(question.toolCallId) ?: QuestionDraft(toolCallId = question.toolCallId)
+    }
+
+    /** The draft of [problem]: the one being edited, else the one saved for it, else a fresh one. */
+    private fun problemDraftFor(problem: ActiveProblemView?, current: QuestionDraft): QuestionDraft = when {
+        problem == null -> QuestionDraft()
+        current.toolCallId == problem.toolCallId -> current
+        else -> QuestionDraft(toolCallId = problem.toolCallId, thinking = restored.value[problem.toolCallId]?.thinking.orEmpty())
+    }
+
+    private fun editProblemDraft(change: QuestionDraft.() -> QuestionDraft) {
+        val problem = latest.value?.activeProblem ?: return
+        problemDraft.update { current -> problemDraftFor(problem, current).change() }
+    }
+
+    fun onToggleProblem() = editProblemDraft { copy(collapsed = !collapsed) }
+
+    fun onProblemThinkingChange(text: String) = editProblemDraft { copy(thinking = text) }
+
+    /** Submits the thinking on the active problem; the dock stays, the problem is still active. */
+    fun onSubmitThinking() {
+        val problem = latest.value?.activeProblem ?: return
+        val current = problemDraftFor(problem, problemDraft.value)
+        val text = current.thinking.trim()
+        if (text.isEmpty()) return
+        problemDraft.value = current.copy(thinking = "")
+        restored.update { it - problem.toolCallId }
+        submit(LearnerInput.Thinking(problem.toolCallId, text))
+    }
+
+    /** The learner's go-ahead for the next problem. */
+    fun onNextProblem() {
+        if (latest.value?.nextAllowed != true) return
+        submit(LearnerInput.Next)
     }
 
     /** Edits the draft of the question on screen. */
@@ -157,6 +205,10 @@ class SessionViewModel(private val engine: SessionEngine, private val sessionId:
                 engine.submit(sessionId, input)
             } catch (_: TurnInProgressException) {
                 // The screen holds input back while a Turn runs; a double tap lands here and is dropped.
+            } catch (_: NextNotAllowedException) {
+                // A double tap on Next: the first one already moved the Session on.
+            } catch (_: NoActiveProblemException) {
+                // The problem was concluded meanwhile; the dock goes away with it.
             }
         }
     }

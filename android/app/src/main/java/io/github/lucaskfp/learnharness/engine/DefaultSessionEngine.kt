@@ -1,6 +1,7 @@
 package io.github.lucaskfp.learnharness.engine
 
 import androidx.room.withTransaction
+import io.github.lucaskfp.learnharness.engine.model.string
 import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.ContentBlock
 import io.github.lucaskfp.learnharness.engine.model.LhJson
@@ -46,6 +47,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -81,7 +84,6 @@ class DefaultSessionEngine(
     private val revision = MutableStateFlow(0L)
 
     override suspend fun start(request: StartSession): String {
-        require(request.kind == SessionKind.Teaching) { "Practice Sessions are not supported yet" }
         require(request.goal.isNotBlank()) { "A Session needs a goal" }
         val now = environment.clock()
         val sessionId = "chat_${now.toString(36)}_${UUID.randomUUID().toString().take(8)}"
@@ -119,6 +121,25 @@ class DefaultSessionEngine(
                     require(input.text.isNotBlank()) { "A message cannot be empty" }
                     UserMessage(newId("msg"), input.text.trim(), now)
                 }
+                LearnerInput.Next -> {
+                    val kind = database.sessions().get(sessionId)?.kind?.let(SessionKind::valueOf)
+                    if (!nextAllowed(kind, history)) throw NextNotAllowedException(sessionId)
+                    MarkerMessage(newId("msg"), MarkerMessage.PracticeNext, contracts.texts.nextProblem, timestamp = now)
+                }
+                is LearnerInput.Thinking -> {
+                    require(input.text.isNotBlank()) { "Thinking cannot be empty" }
+                    if (activeProblemOf(history)?.id != input.problemCallId) throw NoActiveProblemException(input.problemCallId)
+                    MarkerMessage(
+                        id = newId("msg"),
+                        customType = MarkerMessage.PracticeThinking,
+                        content = "${contracts.texts.thinkingLabel}:\n${input.text.trim()}",
+                        details = buildJsonObject {
+                            put("problemCallId", input.problemCallId)
+                            put("text", input.text.trim())
+                        },
+                        timestamp = now,
+                    )
+                }
                 is LearnerInput.Answer -> {
                     val armed = project(history).pending?.takeIf { it.toolCallId == input.toolCallId }
                         ?: throw NoPendingQuestionException(input.toolCallId)
@@ -136,8 +157,12 @@ class DefaultSessionEngine(
             }
             persist(sessionId, listOf(message), now)
             // What was sent is no longer a draft.
-            if (message is ToolResultMessage) database.drafts().delete(sessionId, AnswerDraftPrefix + message.toolCallId)
-            else database.drafts().delete(sessionId, ComposerDraft)
+            when (input) {
+                is LearnerInput.Answer -> database.drafts().delete(sessionId, AnswerDraftPrefix + input.toolCallId)
+                is LearnerInput.Thinking -> database.drafts().delete(sessionId, AnswerDraftPrefix + input.problemCallId)
+                is LearnerInput.Message -> database.drafts().delete(sessionId, ComposerDraft)
+                LearnerInput.Next -> Unit
+            }
             // A sibling question still waits: the answer is saved, and the last answer wakes the
             // model with every result right after the message that asked.
             if (message is ToolResultMessage && hasUnresolvedQuestion(history + message)) {
@@ -227,16 +252,23 @@ class DefaultSessionEngine(
             val turnRunning = sessionId in running.value
             val liveNow = live.value
             val session = database.sessions().get(sessionId) ?: return@map null
+            val kind = SessionKind.valueOf(session.kind)
             val messages = loadHistory(sessionId)
             val projection = project(messages)
             SessionView(
                 id = session.id,
                 goal = session.title,
-                kind = SessionKind.valueOf(session.kind),
-                phase = phaseOf(messages),
+                kind = kind,
+                phase = phaseOf(kind, messages),
                 plan = planViewOf(messages),
                 transcript = projection.transcript + liveEntries(liveNow[sessionId].orEmpty()),
                 // The learner answers between Turns, never during one.
+                nextAllowed = !turnRunning && nextAllowed(kind, messages),
+                problemConcluded = kind == SessionKind.Practice &&
+                    practicePhaseOf(messages) == SessionPhase.ProblemConcluded,
+                activeProblem = if (turnRunning) null else activeProblemOf(messages)?.let {
+                    ActiveProblemView(it.id, it.arguments.string("statement"))
+                },
                 pendingQuestion = if (turnRunning) null else projection.pending?.let {
                     val (position, siblings) = siblingPlace(messages, it.toolCallId)
                     PendingQuestionView(
@@ -265,7 +297,7 @@ class DefaultSessionEngine(
 
     private suspend fun phaseCached(row: SessionRow): SessionPhase {
         phases[row.id]?.takeIf { it.first == row.updatedAt }?.let { return it.second }
-        return phaseOf(loadHistory(row.id)).also { phases[row.id] = row.updatedAt to it }
+        return phaseOf(SessionKind.valueOf(row.kind), loadHistory(row.id)).also { phases[row.id] = row.updatedAt to it }
     }
 
     override suspend fun delete(sessionId: String) {
@@ -323,6 +355,7 @@ class DefaultSessionEngine(
     private suspend fun runTurn(sessionId: String): Boolean {
         val session = database.sessions().get(sessionId) ?: return false
         val language = TeachingLanguage.valueOf(session.teachingLanguage)
+        val sessionKind = SessionKind.valueOf(session.kind)
         var history = loadHistory(sessionId)
         val produced = mutableListOf<LhMessage>()
         try {
@@ -331,7 +364,7 @@ class DefaultSessionEngine(
                 // The agent is chosen from the history at the start of each stretch: after a
                 // probe_done the Prober still finishes its Turn (its closing sentence), and the
                 // Teacher takes over from the next stretch.
-                val kind = agentFor(history)
+                val kind = agentFor(sessionKind, history)
                 if (kind == AgentKind.Teacher && history.none { it is MarkerMessage && it.customType == MarkerMessage.ProbeHandoff }) {
                     // Also covers a handoff cut short (a failed closing call): the Teacher is then
                     // woken by the learner's next input.
@@ -344,7 +377,13 @@ class DefaultSessionEngine(
                     produced += handoff
                     history = history + handoff
                 }
-                val system = if (kind == AgentKind.Prober) prompts.prober(language) else prompts.teacher(language)
+                // The one-active-problem gate is seeded once per Turn from the saved history.
+                val gate = if (kind == AgentKind.Practitioner) PracticeGate(activeProblemOf(history) != null) else null
+                val system = when (kind) {
+                    AgentKind.Prober -> prompts.prober(language)
+                    AgentKind.Teacher -> prompts.teacher(language)
+                    AgentKind.Practitioner -> prompts.practitioner(language)
+                }
                 var posedQuestion = false
                 while (true) {
                     // The safe boundary: before every model call, never between a call and its results.
@@ -362,12 +401,10 @@ class DefaultSessionEngine(
                     if (assistant.stopReason != StopReason.ToolUse) break
 
                     for (call in assistant.toolCalls) {
-                        val outcome = tools.execute(kind, call, history)
-                        if (outcome.terminates) {
-                            // The "question posed" placeholder is never saved: the learner's answer is the result.
-                            posedQuestion = true
-                            continue
-                        }
+                        val outcome = tools.execute(kind, call, history, gate)
+                        if (outcome.terminates) posedQuestion = true
+                        // The "question posed" placeholder is never saved: the learner's answer is the result.
+                        if (!outcome.persist) continue
                         val result = ToolResultMessage(
                             id = newId("msg"),
                             toolCallId = call.id,

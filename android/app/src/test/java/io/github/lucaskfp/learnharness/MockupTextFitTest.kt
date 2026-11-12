@@ -15,12 +15,14 @@ import androidx.compose.ui.unit.Density
 import io.github.lucaskfp.learnharness.ui.components.TruncatedByDesign
 import io.github.lucaskfp.learnharness.ui.newsession.NewSessionScreen
 import io.github.lucaskfp.learnharness.ui.preview.FakeNewSession
+import io.github.lucaskfp.learnharness.ui.preview.FakePractice
 import io.github.lucaskfp.learnharness.ui.preview.FakeSessions
 import io.github.lucaskfp.learnharness.ui.preview.FakeSetup
 import io.github.lucaskfp.learnharness.ui.preview.FakeTeaching
 import io.github.lucaskfp.learnharness.ui.sessions.SessionsScreen
 import io.github.lucaskfp.learnharness.ui.setup.SetupScreen
 import io.github.lucaskfp.learnharness.ui.teaching.PlanScreen
+import io.github.lucaskfp.learnharness.ui.teaching.PracticeOutcomes
 import io.github.lucaskfp.learnharness.ui.teaching.TeachingSessionScreen
 import io.github.lucaskfp.learnharness.ui.theme.LearnHarnessTheme
 import org.junit.Assert.assertTrue
@@ -52,7 +54,7 @@ class MockupTextFitTest(private val mockup: Mockup, private val fontScale: Float
     companion object {
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0} @ {1}x")
-        fun parameters() = atBothScales(setupMockups + sessionsMockups + newSessionMockups + probeAndPlanMockups + teachMockups)
+        fun parameters() = atBothScales(setupMockups + sessionsMockups + newSessionMockups + probeAndPlanMockups + teachMockups + practiceMockups)
     }
 }
 
@@ -122,6 +124,13 @@ private val teachMockups = listOf(
     Mockup("teach-steer-queued") { TeachingSessionScreen(FakeTeaching.teachSteerQueued()) },
     Mockup("teach-failed") { TeachingSessionScreen(FakeTeaching.teachFailed()) },
     Mockup("teach-interrupted") { TeachingSessionScreen(FakeTeaching.teachInterrupted()) },
+)
+
+private val practiceMockups = listOf(
+    Mockup("practice-active-problem") { TeachingSessionScreen(FakePractice.activeProblem()) },
+    Mockup("practice-hint") { TeachingSessionScreen(FakePractice.hint()) },
+    Mockup("practice-concluded") { TeachingSessionScreen(FakePractice.concluded()) },
+    Mockup("practice-outcomes") { PracticeOutcomes() },
 )
 
 private fun atBothScales(mockups: List<Mockup>): List<Array<Any>> =

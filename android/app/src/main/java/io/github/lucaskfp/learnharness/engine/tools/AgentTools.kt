@@ -1,5 +1,6 @@
 package io.github.lucaskfp.learnharness.engine.tools
 
+import io.github.lucaskfp.learnharness.engine.PracticeGate
 import io.github.lucaskfp.learnharness.engine.hasProbeDone
 import io.github.lucaskfp.learnharness.engine.hasUnresolvedQuestion
 import io.github.lucaskfp.learnharness.engine.model.LhJson
@@ -24,8 +25,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-/** The two agents of a Teaching Session. */
-enum class AgentKind { Prober, Teacher }
+/** The two agents of a Teaching Session, and the Practitioner of a Practice Session. */
+enum class AgentKind { Prober, Teacher, Practitioner }
 
 /** How the agents quiz: graded multiple choice (`probe`, `quiz`) or free recall (`recall`, `explain`). */
 enum class QuizMechanics { Choice, FreeRecall }
@@ -37,8 +38,13 @@ data class ToolOutcome(
     val isError: Boolean,
     /** The record-facing value kept with the result. */
     val details: JsonElement? = null,
-    /** A posed question: the Turn ends and the learner's answer becomes this call's result. */
+    /** A posed question or problem: the Turn ends. */
     val terminates: Boolean = false,
+    /**
+     * Whether a terminating call's result is saved. A question's placeholder never is (the learner's
+     * answer becomes its result); a problem's result is, since the learner's thinking arrives as messages.
+     */
+    val persist: Boolean = !terminates,
 )
 
 /**
@@ -61,10 +67,19 @@ class AgentTools(private val contracts: ToolContracts, mechanics: QuizMechanics 
         contracts.spec(ToolNames.PlanInit),
     )
 
-    fun specs(kind: AgentKind): List<ToolSpec> = if (kind == AgentKind.Prober) prober else teacher
+    private val practitioner = listOf(contracts.spec(ToolNames.Problem), contracts.spec(ToolNames.Conclude))
 
-    /** Runs one call against [history], which already holds the assistant message that made it. */
-    fun execute(kind: AgentKind, call: ToolCall, history: List<LhMessage>): ToolOutcome {
+    fun specs(kind: AgentKind): List<ToolSpec> = when (kind) {
+        AgentKind.Prober -> prober
+        AgentKind.Teacher -> teacher
+        AgentKind.Practitioner -> practitioner
+    }
+
+    /**
+     * Runs one call against [history], which already holds the assistant message that made it. The
+     * Practitioner's calls read and flip the Turn's [gate].
+     */
+    fun execute(kind: AgentKind, call: ToolCall, history: List<LhMessage>, gate: PracticeGate? = null): ToolOutcome {
         val spec = specs(kind).firstOrNull { it.name == call.name }
             ?: return ToolOutcome("Tool ${call.name} not found", isError = true)
         call.argumentsError?.let {
@@ -79,6 +94,8 @@ class AgentTools(private val contracts: ToolContracts, mechanics: QuizMechanics 
         return when (call.name) {
             ToolNames.ProbeDone -> probeDone(history)
             ToolNames.PlanInit -> planInit(arguments)
+            ToolNames.Problem -> problem(checkNotNull(gate))
+            ToolNames.Conclude -> conclude(checkNotNull(gate))
             else -> question(call.name, arguments, history)
         }
     }
@@ -136,6 +153,27 @@ class AgentTools(private val contracts: ToolContracts, mechanics: QuizMechanics 
                 put("tree", LhJson.encodeToJsonElement(PlanTree.serializer(), tree))
             },
         )
+    }
+
+    /** Upstream's `problem`: one problem at a time; a pose ends the Turn and its result is kept. */
+    private fun problem(gate: PracticeGate): ToolOutcome {
+        if (gate.problemActive) {
+            return invalidInput(ToolNames.Problem, listOf("a problem is already active — call conclude on it before posing the next one"))
+        }
+        gate.problemActive = true
+        return ToolOutcome(contracts.texts.problemPosed, isError = false, terminates = true, persist = true)
+    }
+
+    /**
+     * Upstream's `conclude`: frees the active problem. Not terminating: the Practitioner may say its
+     * closing words, and the ack tells it to end its Turn and wait for the learner's go-ahead.
+     */
+    private fun conclude(gate: PracticeGate): ToolOutcome {
+        if (!gate.problemActive) {
+            return invalidInput(ToolNames.Conclude, listOf("no active problem to conclude — pose one first"))
+        }
+        gate.problemActive = false
+        return ToolOutcome(contracts.texts.concludeAck, isError = false)
     }
 
     /** Upstream's `probe_done`: refused while a question is open or once the probe has concluded. */

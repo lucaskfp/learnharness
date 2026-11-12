@@ -114,6 +114,13 @@ class EngineHarness(
         engine.start(StartSession(SessionKind.Teaching, goal, "claude-sonnet-5-5", language))
     }
 
+    fun startPractice(
+        topic: String = "Dynamic programming on sequences",
+        language: TeachingLanguage = TeachingLanguage.English,
+    ): String = runBlocking {
+        engine.start(StartSession(SessionKind.Practice, topic, "claude-sonnet-5-5", language))
+    }
+
     /** Waits until no Turn is running in the Session, then returns its view. */
     fun settled(sessionId: String): SessionView = runBlocking {
         withTimeout(10_000) { engine.observe(sessionId).first { it != null && !it.turnRunning }!! }
@@ -176,3 +183,29 @@ fun quizArguments(
 }
 
 val TwoNodePlan = "graph TD\n  slope[The slope idea] --> rule[The power rule]"
+
+/** Arguments of a Practitioner `problem` call: the statement and the solution committed with it. */
+fun problemArguments(
+    statement: String,
+    modelSolution: String,
+    mode: String = "composition",
+): JsonObject = buildJsonObject {
+    put("statement", statement)
+    put("mode", mode)
+    put("modelSolution", modelSolution)
+}
+
+/** Arguments of a Practitioner `conclude` call. */
+fun concludeArguments(
+    outcome: String,
+    verdict: String,
+    rung: String? = null,
+    missClass: String? = null,
+    retest: Boolean = false,
+): JsonObject = buildJsonObject {
+    put("outcome", outcome)
+    put("verdict", verdict)
+    put("rung", rung)
+    put("missClass", missClass)
+    put("retest", retest)
+}

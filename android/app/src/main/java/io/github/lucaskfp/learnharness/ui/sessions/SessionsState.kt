@@ -18,6 +18,8 @@ enum class SessionPhase(@StringRes val label: Int) {
     Probing(R.string.phase_probing),
     Planning(R.string.phase_planning),
     Teaching(R.string.phase_teaching),
+    /** A Practice Session before its first problem. */
+    Practice(R.string.phase_practice),
     ProblemOpen(R.string.problem_open),
     ProblemConcluded(R.string.problem_concluded),
 }

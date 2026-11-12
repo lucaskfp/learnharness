@@ -2,6 +2,7 @@ package io.github.lucaskfp.learnharness.ui.teaching
 
 import io.github.lucaskfp.learnharness.engine.PendingQuestionView
 import io.github.lucaskfp.learnharness.engine.PlanView
+import io.github.lucaskfp.learnharness.engine.ProblemOutcome as EngineOutcome
 import io.github.lucaskfp.learnharness.engine.SessionPhase as EnginePhase
 import io.github.lucaskfp.learnharness.engine.SessionView
 import io.github.lucaskfp.learnharness.engine.TranscriptEntry
@@ -22,12 +23,16 @@ data class QuestionDraft(
     val collapsed: Boolean = false,
 )
 
-/** The engine's view of a Session, drawn by the Teaching Session screen. */
+/**
+ * The engine's view of a Session, drawn by the Session screen. [problemDraft] is the learner's
+ * unsent thinking on the active practice problem, used only if it belongs to that problem.
+ */
 fun toTeachingState(
     view: SessionView,
     draft: QuestionDraft,
     composerText: String,
     expandedReasoning: Set<Int>,
+    problemDraft: QuestionDraft = QuestionDraft(),
 ): TeachingSessionState = TeachingSessionState(
     goal = view.goal,
     phase = view.phase.toUi(),
@@ -40,6 +45,12 @@ fun toTeachingState(
     composerText = composerText,
     queuedSteers = view.queuedSteers.map { it.text },
     failure = view.failure?.let { TurnFailure(it.message, it.retryable) },
+    problem = view.activeProblem?.let { active ->
+        val own = problemDraft.takeIf { it.toolCallId == active.toolCallId } ?: QuestionDraft()
+        PracticeProblem(active.statement, own.thinking, own.collapsed)
+    },
+    nextAllowed = view.nextAllowed,
+    askAboutSolution = view.problemConcluded,
 )
 
 private fun TranscriptEntry.toItem(reasoningExpanded: Boolean): TranscriptItem = when (this) {
@@ -50,12 +61,28 @@ private fun TranscriptEntry.toItem(reasoningExpanded: Boolean): TranscriptItem =
     is TranscriptEntry.PhaseBoundary -> TranscriptItem.PhaseBoundary(phase.toUi(), nodeCount)
     is TranscriptEntry.PlanSnapshot -> TranscriptItem.PlanSnapshot(plan.toUi())
     TranscriptEntry.Interrupted -> TranscriptItem.Interrupted
+    is TranscriptEntry.Problem -> TranscriptItem.ProblemCard(statement)
+    is TranscriptEntry.Thinking -> TranscriptItem.ThinkingCard(text)
+    // An outcome this version does not know reads as neutral, like moving on.
+    is TranscriptEntry.Concluded -> TranscriptItem.ConcludedCard(outcome?.toUi() ?: ProblemOutcome.MovedOn, verdict, modelSolution)
+    TranscriptEntry.NextProblem -> TranscriptItem.NextProblemLine
+}
+
+private fun EngineOutcome.toUi(): ProblemOutcome = when (this) {
+    EngineOutcome.Solved -> ProblemOutcome.Solved
+    EngineOutcome.SolvedWithHints -> ProblemOutcome.SolvedWithHints
+    EngineOutcome.MovedOn -> ProblemOutcome.MovedOn
+    EngineOutcome.Surrendered -> ProblemOutcome.Surrendered
+    EngineOutcome.Dismissed -> ProblemOutcome.Dismissed
 }
 
 private fun EnginePhase.toUi(): SessionPhase = when (this) {
     EnginePhase.Probing -> SessionPhase.Probing
     EnginePhase.Planning -> SessionPhase.Planning
     EnginePhase.Teaching -> SessionPhase.Teaching
+    EnginePhase.Practice -> SessionPhase.Practice
+    EnginePhase.ProblemOpen -> SessionPhase.ProblemOpen
+    EnginePhase.ProblemConcluded -> SessionPhase.ProblemConcluded
 }
 
 private fun PlanView.toUi() = Plan(

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A Session's message history, in upstream's record shape (pi-ai messages plus an `id`), so rows
@@ -75,6 +76,12 @@ data class MarkerMessage(
     companion object {
         /** The wake that starts the Teacher once the probe has concluded. */
         const val ProbeHandoff = "probe-handoff"
+
+        /** The learner's thinking on a practice problem. */
+        const val PracticeThinking = "practice-thinking"
+
+        /** The learner's go-ahead for the next practice problem. */
+        const val PracticeNext = "practice-next"
     }
 }
 
@@ -134,6 +141,10 @@ object StopReason {
     const val Error = "error"
     const val Aborted = "aborted"
 }
+
+/** A string field of a tool call's arguments or a marker's details; empty when absent or not a string. */
+internal fun JsonObject.string(key: String): String =
+    (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
 
 /** The one JSON configuration for message rows and tool arguments. */
 val LhJson: Json = Json {

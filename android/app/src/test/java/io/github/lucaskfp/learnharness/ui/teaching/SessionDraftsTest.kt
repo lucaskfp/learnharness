@@ -4,6 +4,7 @@ import android.os.Looper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.lucaskfp.learnharness.engine.EngineHarness
 import io.github.lucaskfp.learnharness.engine.probeArguments
+import io.github.lucaskfp.learnharness.engine.problemArguments
 import io.github.lucaskfp.learnharness.engine.text
 import io.github.lucaskfp.learnharness.engine.toolCall
 import kotlinx.coroutines.CoroutineScope
@@ -91,5 +92,32 @@ class SessionDraftsTest {
         val after = open(reopened, id)
 
         pumpUntil { after.state.value?.composerText == "Could you also show" }
+    }
+
+    @Test
+    fun unsentThinkingOnAProblemComesBackAfterTheProcessIsKilledAndSubmittingSendsIt() {
+        harness.provider.reply(toolCall("p_1", "problem", problemArguments("Count the ways.", "89.")))
+        val id = harness.startPractice()
+        harness.settled(id)
+
+        val before = open(harness, id)
+        pumpUntil { before.state.value?.problem != null }
+        before.onProblemThinkingChange("ways(n) = ways(n-1) + ways(n-2)")
+        pumpUntil { runBlocking { harness.engine.drafts(id) }.answers["p_1"]?.thinking == "ways(n) = ways(n-1) + ways(n-2)" }
+
+        harness.stopEngine()
+        val reopened = EngineHarness(provider = harness.provider, database = harness.database)
+        val after = open(reopened, id)
+        pumpUntil { after.state.value?.problem?.thinking == "ways(n) = ways(n-1) + ways(n-2)" }
+
+        reopened.provider.reply(text("Right. Now the base cases."))
+        after.onSubmitThinking()
+        pumpUntil {
+            val state = after.state.value
+            state != null && !state.turnRunning && state.transcript.any { it == TranscriptItem.ThinkingCard("ways(n) = ways(n-1) + ways(n-2)") }
+        }
+        assertEquals("", after.state.value!!.problem!!.thinking)
+        assertEquals(null, runBlocking { reopened.engine.drafts(id) }.answers["p_1"])
+        reopened.stopEngine()
     }
 }

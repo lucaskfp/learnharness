@@ -16,7 +16,9 @@ import { askUserQuestionTool, probeExplainTool, probeQuizTool, teachExplainToolF
 import { probeDoneTool } from "../src/agent/tools/probe.ts";
 import { planTools, PLAN_NODE_IDS_REMINDER } from "../src/agent/tools/plan.ts";
 import { HANDOFF_TEXT, PROBE_DONE_ACK_TEXT } from "../src/core/contracts.ts";
-import { questionResult } from "../src/agent/tool-execute.ts";
+import { problemResult, questionResult } from "../src/agent/tool-execute.ts";
+import { practiceTools } from "../src/agent/tools/practice.ts";
+import { CONCLUDE_ACK_TEXT, NEXT_PROBLEM_TEXT, THINKING_LABEL } from "../src/core/contracts/chat.ts";
 import { INTERRUPTED_TEXT } from "../src/core/native-messages.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -43,6 +45,9 @@ export function androidContracts(): unknown {
 				tool(planTools(NO_CHAT).plan_init!),
 				tool(teachQuizToolFor(NO_CHAT)),
 				tool(teachExplainToolFor(NO_CHAT)),
+				// The Practitioner's tools, over no graph: problems are untagged until Android has one.
+				tool(practiceTools(NO_CHAT).problem!),
+				tool(practiceTools(NO_CHAT).conclude!),
 			],
 		texts: {
 			questionPosed: questionResult().content[0]!.type === "text" ? (questionResult().content[0] as { text: string }).text : "",
@@ -50,6 +55,10 @@ export function androidContracts(): unknown {
 				probeDoneAck: PROBE_DONE_ACK_TEXT,
 				probeHandoff: HANDOFF_TEXT,
 				planNodeIdsReminder: PLAN_NODE_IDS_REMINDER,
+				problemPosed: (problemResult().content[0] as { text: string }).text,
+				concludeAck: CONCLUDE_ACK_TEXT,
+				nextProblem: NEXT_PROBLEM_TEXT,
+				thinkingLabel: THINKING_LABEL,
 		},
 	};
 }

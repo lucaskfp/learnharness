@@ -1,6 +1,7 @@
 package io.github.lucaskfp.learnharness.engine
 
 import io.github.lucaskfp.learnharness.engine.tools.ToolNames
+import io.github.lucaskfp.learnharness.engine.model.string
 import io.github.lucaskfp.learnharness.engine.model.AssistantMessage
 import io.github.lucaskfp.learnharness.engine.model.ContentBlock
 import io.github.lucaskfp.learnharness.engine.model.LhJson
@@ -18,6 +19,7 @@ import io.github.lucaskfp.learnharness.engine.question.ArmedQuestion
 import io.github.lucaskfp.learnharness.engine.question.QuestionAnswerData
 import io.github.lucaskfp.learnharness.engine.question.QuestionTools
 import io.github.lucaskfp.learnharness.engine.question.armQuestion
+import kotlinx.serialization.json.JsonObject
 
 /** What the UI shows of a saved history: the transcript, and the question waiting, if any. */
 internal data class Projection(val transcript: List<TranscriptEntry>, val pending: ArmedQuestion?)
@@ -39,7 +41,12 @@ internal fun project(messages: List<LhMessage>): Projection {
     messages.forEachIndexed { index, message ->
         when (message) {
             is UserMessage -> transcript += TranscriptEntry.Learner(message.content)
-            is MarkerMessage -> Unit
+            is MarkerMessage -> when (message.customType) {
+                MarkerMessage.PracticeThinking ->
+                    transcript += TranscriptEntry.Thinking((message.details as? JsonObject)?.string("text").orEmpty())
+                MarkerMessage.PracticeNext -> transcript += TranscriptEntry.NextProblem
+                else -> Unit
+            }
             is ToolResultMessage -> if (message.toolName == ToolNames.PlanInit) {
                 // Each successful plan_init is a snapshot, so a replacement is visible; the first opens the Planning seam.
                 val tree = latestPlanTree(listOf(message))
@@ -69,6 +76,26 @@ internal fun project(messages: List<LhMessage>): Projection {
                             transcript += TranscriptEntry.Reasoning(block.thinking)
                         }
                         is ToolCall -> {
+                            if (block.name == ToolNames.Problem) {
+                                // A refused pose never happened; one still waiting for its result is shown once it has one.
+                                val result = results[block.id]
+                                if (result != null && !result.isError) {
+                                    transcript += TranscriptEntry.Problem(block.id, block.arguments.string("statement"))
+                                }
+                                continue
+                            }
+                            if (block.name == ToolNames.Conclude) {
+                                val result = results[block.id]
+                                if (result != null && !result.isError) {
+                                    val solution = problemForConclude(messages, block.id)?.arguments?.string("modelSolution")
+                                    transcript += TranscriptEntry.Concluded(
+                                        outcome = ProblemOutcome.of(block.arguments.string("outcome")),
+                                        verdict = block.arguments.string("verdict"),
+                                        modelSolution = solution?.takeIf { it.isNotEmpty() },
+                                    )
+                                }
+                                continue
+                            }
                             if (block.name !in QuestionTools) continue
                             val result = results[block.id]
                             if (result == null) {

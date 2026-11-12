@@ -22,6 +22,13 @@ class PromptComposer(private val assets: AssetSource) {
     fun teacher(language: TeachingLanguage): String =
         compose(listOf("system-prompt.md") + fragments("teacher") + fragments("shared"), language)
 
+    /**
+     * The Practitioner composes only its own directory and a curated shared appendix, with no
+     * teaching base (upstream `effectivePromptSegments("practice")`).
+     */
+    fun practitioner(language: TeachingLanguage): String =
+        compose(fragments("practice") + PracticeShared.map { "shared/$it" }, language)
+
     private fun fragments(directory: String): List<String> =
         assets.list("$Root/$directory")
             .filter { FragmentName.matches(it) }
@@ -41,6 +48,9 @@ class PromptComposer(private val assets: AssetSource) {
 
     private companion object {
         const val Root = "upstream/prompts"
+
+        /** The shared fragments upstream allowlists for practice; other shared fragments stay out. */
+        val PracticeShared = listOf("10-voice.md", "15-accuracy.md", "16-mental-model.md", "40-formatting.md")
 
         /** Upstream accepts only numeric-prefixed fragments, so README files never enter a prompt. */
         val FragmentName = Regex("^\\d+-[\\w.-]+\\.md$")

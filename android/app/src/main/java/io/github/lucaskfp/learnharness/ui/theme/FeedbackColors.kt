@@ -20,6 +20,14 @@ private val ConfidenceRamp = mapOf(
 /** The ramp color of a confidence stop (0, 30, 50, 70, 90 or 100 percent). */
 fun confidenceColor(percent: Int): Color = ConfidenceRamp.getValue(percent)
 
+/** A problem solved with hints: the amber the owner chose for this outcome alone. */
+val amberColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) Color(0xFFF59E0B) else Color(0xFFB45309)
+
+/** Content drawn on [correctColor], as on the Next problem button. */
+val onCorrectColor: Color
+    @Composable get() = if (isSystemInDarkTheme()) Color(0xFF141414) else Color(0xFFFFFFFF)
+
 /** Correct answers: the ramp's emerald, darkened on the light theme for contrast. */
 val correctColor: Color
     @Composable get() = if (isSystemInDarkTheme()) Color(0xFF10B981) else Color(0xFF047857)

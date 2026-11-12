@@ -65,6 +65,9 @@ class SessionsViewModel(
             EnginePhase.Probing -> SessionPhase.Probing
             EnginePhase.Planning -> SessionPhase.Planning
             EnginePhase.Teaching -> SessionPhase.Teaching
+            EnginePhase.Practice -> SessionPhase.Practice
+            EnginePhase.ProblemOpen -> SessionPhase.ProblemOpen
+            EnginePhase.ProblemConcluded -> SessionPhase.ProblemConcluded
         },
         minutesSinceActivity = ((now - updatedAt) / 60_000).coerceAtLeast(0),
         turnRunning = turnRunning,

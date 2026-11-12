@@ -24,6 +24,14 @@ data class ContractTexts(
     val probeHandoff: String,
     /** Rides a successful `plan_init` result: from now on every quiz names one of these node ids. */
     val planNodeIdsReminder: String,
+    /** The persisted result of a posed problem: the learner's thinking arrives as messages, never as this result. */
+    val problemPosed: String,
+    /** The result of a `conclude`: the Practitioner closes and ends its Turn, waiting for the go-ahead. */
+    val concludeAck: String,
+    /** The model-facing text of the learner's Next marker. */
+    val nextProblem: String,
+    /** The label a thinking submission is prefixed with for the model. */
+    val thinkingLabel: String,
 )
 
 /**

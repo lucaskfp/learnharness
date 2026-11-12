@@ -113,12 +113,41 @@ sealed interface TranscriptItem {
 
     /** Where the learner stopped a Turn; what it generated before stays above. */
     data object Interrupted : TranscriptItem
+
+    /** A problem the Practitioner posed. */
+    data class ProblemCard(val statement: String) : TranscriptItem
+
+    /** The learner's thinking on a problem. */
+    data class ThinkingCard(val text: String) : TranscriptItem
+
+    /** A concluded problem: outcome, verdict and the revealed model solution. */
+    data class ConcludedCard(val outcome: ProblemOutcome, val verdict: String, val modelSolution: String?) : TranscriptItem
+
+    /** Where the learner asked for the next problem. */
+    data object NextProblemLine : TranscriptItem
+}
+
+/** How a problem ended, with the chip's label; the chip's colors are the theme's. */
+enum class ProblemOutcome(@StringRes val label: Int) {
+    Solved(R.string.outcome_solved),
+    SolvedWithHints(R.string.outcome_solved_with_hints),
+    Surrendered(R.string.outcome_surrendered),
+    MovedOn(R.string.outcome_moved_on),
+    Dismissed(R.string.outcome_dismissed),
 }
 
 /** The failed model response the Session ends on; [retryable] when "Try again" can resume it. */
 data class TurnFailure(val message: String, val retryable: Boolean)
 
-/** Everything a Teaching Session screen shows. */
+/** The problem the learner works on in a Practice Session, docked in place of the composer. */
+data class PracticeProblem(
+    val statement: String,
+    /** The learner's thinking, typed but not submitted. */
+    val thinking: String = "",
+    val collapsed: Boolean = false,
+)
+
+/** Everything a Session screen shows, Teaching or Practice. */
 data class TeachingSessionState(
     val goal: String,
     val phase: SessionPhase,
@@ -130,4 +159,10 @@ data class TeachingSessionState(
     /** Steering messages waiting for the running Turn's next safe point, oldest first. */
     val queuedSteers: List<String> = emptyList(),
     val failure: TurnFailure? = null,
+    /** The active practice problem, while no Turn runs. */
+    val problem: PracticeProblem? = null,
+    /** Between practice problems: the composer offers "Next problem". */
+    val nextAllowed: Boolean = false,
+    /** The latest problem was concluded: the composer invites questions about its solution. */
+    val askAboutSolution: Boolean = false,
 )
