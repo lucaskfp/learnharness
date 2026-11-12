@@ -110,7 +110,13 @@ sealed interface TranscriptItem {
     data class ImageCard(val caption: String, val annotations: List<ImageAnnotation>) : TranscriptItem
 
     data class JobCard(val kind: JobKind, val title: String, val status: JobStatus) : TranscriptItem
+
+    /** Where the learner stopped a Turn; what it generated before stays above. */
+    data object Interrupted : TranscriptItem
 }
+
+/** The failed model response the Session ends on; [retryable] when "Try again" can resume it. */
+data class TurnFailure(val message: String, val retryable: Boolean)
 
 /** Everything a Teaching Session screen shows. */
 data class TeachingSessionState(
@@ -121,4 +127,7 @@ data class TeachingSessionState(
     val question: PendingQuestion? = null,
     val turnRunning: Boolean = false,
     val composerText: String = "",
+    /** Steering messages waiting for the running Turn's next safe point, oldest first. */
+    val queuedSteers: List<String> = emptyList(),
+    val failure: TurnFailure? = null,
 )

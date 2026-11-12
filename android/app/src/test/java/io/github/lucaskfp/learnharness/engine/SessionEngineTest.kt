@@ -379,12 +379,12 @@ class SessionEngineTest {
         val id = harness.startTeaching()
 
         val failed = harness.settled(id)
-        assertEquals("Overloaded", failed.error)
+        assertEquals("Overloaded", failed.failure?.message)
 
         runBlocking { engine.submit(id, LearnerInput.Message("Let's continue")) }
         val recovered = harness.settled(id)
 
-        assertNull(recovered.error)
+        assertNull(recovered.failure)
         assertEquals(TranscriptEntry.AgentText("Back again."), recovered.transcript.last())
         // The failed generation is not replayed to the model.
         assertTrue(provider.requests.last().messages.none { it is AssistantMessage })

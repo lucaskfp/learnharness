@@ -72,3 +72,18 @@ private fun TeachJobsPreview() = LearnHarnessTheme { TeachingSessionScreen(FakeT
 @LhLargeFontPreview
 @Composable
 private fun TeachRunningPreview() = LearnHarnessTheme { TeachingSessionScreen(FakeTeaching.teachRunning()) }
+
+@LhPreviews
+@LhLargeFontPreview
+@Composable
+private fun TeachSteerQueuedPreview() = LearnHarnessTheme { TeachingSessionScreen(FakeTeaching.teachSteerQueued()) }
+
+@LhPreviews
+@LhLargeFontPreview
+@Composable
+private fun TeachFailedPreview() = LearnHarnessTheme { TeachingSessionScreen(FakeTeaching.teachFailed()) }
+
+@LhPreviews
+@LhLargeFontPreview
+@Composable
+private fun TeachInterruptedPreview() = LearnHarnessTheme { TeachingSessionScreen(FakeTeaching.teachInterrupted()) }

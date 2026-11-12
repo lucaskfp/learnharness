@@ -38,6 +38,8 @@ fun toTeachingState(
     },
     turnRunning = view.turnRunning,
     composerText = composerText,
+    queuedSteers = view.queuedSteers.map { it.text },
+    failure = view.failure?.let { TurnFailure(it.message, it.retryable) },
 )
 
 private fun TranscriptEntry.toItem(reasoningExpanded: Boolean): TranscriptItem = when (this) {
@@ -47,6 +49,7 @@ private fun TranscriptEntry.toItem(reasoningExpanded: Boolean): TranscriptItem =
     is TranscriptEntry.Answered -> data.toItem()
     is TranscriptEntry.PhaseBoundary -> TranscriptItem.PhaseBoundary(phase.toUi(), nodeCount)
     is TranscriptEntry.PlanSnapshot -> TranscriptItem.PlanSnapshot(plan.toUi())
+    TranscriptEntry.Interrupted -> TranscriptItem.Interrupted
 }
 
 private fun EnginePhase.toUi(): SessionPhase = when (this) {
@@ -92,6 +95,8 @@ private fun PendingQuestionView.toPending(draft: QuestionDraft) = PendingQuestio
     dontKnow = draft.dontKnow,
     answer = draft.answer,
     thinking = draft.thinking,
+    position = position,
+    count = siblings,
     collapsed = draft.collapsed,
     freeText = freeText,
 )

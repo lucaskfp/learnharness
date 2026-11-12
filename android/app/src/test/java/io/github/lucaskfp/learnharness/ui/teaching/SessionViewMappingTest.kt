@@ -1,6 +1,8 @@
 package io.github.lucaskfp.learnharness.ui.teaching
 
+import io.github.lucaskfp.learnharness.engine.FailureView
 import io.github.lucaskfp.learnharness.engine.PendingQuestionView
+import io.github.lucaskfp.learnharness.engine.QueuedSteer
 import io.github.lucaskfp.learnharness.engine.PlanView
 import io.github.lucaskfp.learnharness.engine.SessionKind
 import io.github.lucaskfp.learnharness.engine.SessionView
@@ -32,7 +34,7 @@ class SessionViewMappingTest {
         pendingQuestion = pending,
         plan = plan,
         turnRunning = false,
-        error = null,
+        failure = null,
     )
 
     private fun state(view: SessionView, expanded: Set<Int> = emptySet()) =
@@ -84,5 +86,23 @@ class SessionViewMappingTest {
         assertEquals(QuestionKind.Prediction, state(view(emptyList(), quiz("predict"))).question!!.kind)
         assertEquals(QuestionKind.Check, state(view(emptyList(), quiz("check"))).question!!.kind)
         assertEquals(QuestionKind.Check, state(view(emptyList(), quiz(null))).question!!.kind)
+    }
+
+    @Test
+    fun turnControlStatesReachTheScreen() {
+        val view = view(
+            listOf(TranscriptEntry.AgentText("Exponents commute, so"), TranscriptEntry.Interrupted),
+            pending = quiz("check").copy(position = 2, siblings = 3),
+        ).copy(
+            queuedSteers = listOf(QueuedSteer("steer_1", "Use small numbers")),
+            failure = FailureView("Overloaded", retryable = true),
+        )
+
+        val state = state(view)
+
+        assertEquals(listOf(TranscriptItem.AgentProse("Exponents commute, so"), TranscriptItem.Interrupted), state.transcript)
+        assertEquals(listOf("Use small numbers"), state.queuedSteers)
+        assertEquals(TurnFailure("Overloaded", retryable = true), state.failure)
+        assertEquals(2 to 3, state.question!!.let { it.position to it.count })
     }
 }

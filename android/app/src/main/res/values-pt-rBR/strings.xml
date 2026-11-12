@@ -78,7 +78,11 @@
     <string name="question_probe">Sondagem</string>
     <string name="question_recall">Lembrar</string>
     <string name="question_prediction">Previsão</string>
-    <string name="turn_failed">O modelo não respondeu: %1$s</string>
+    <string name="turn_failed_title">O modelo não respondeu</string>
+    <string name="turn_failed_send_new">Envie uma nova mensagem para continuar.</string>
+    <string name="retry_turn">Tentar de novo</string>
+    <string name="turn_interrupted">Turno interrompido</string>
+    <string name="steer_queued">Na fila</string>
     <string name="question_ask">Pergunta</string>
     <string name="question_check">Verificação</string>
     <string name="question_position">%1$s · %2$d de %3$d</string>
@@ -173,4 +177,7 @@
     <string name="fake_t_research_activity">Lendo 3 de 7 fontes</string>
     <string name="fake_t_demo_title">Teste o Diffie–Hellman com números pequenos</string>
     <string name="fake_t_steer">E se Eva alterar A antes de Bob recebê-lo?</string>
+    <string name="fake_t_steer_queued">Dá para mostrar com números pequenos?</string>
+    <string name="fake_t_failure_reason">Overloaded (529). The provider is busy right now.</string>
+    <string name="fake_t_partial">O Diffie–Hellman funciona porque os expoentes podem ser aplicados em qualquer ordem, então</string>
 </resources>

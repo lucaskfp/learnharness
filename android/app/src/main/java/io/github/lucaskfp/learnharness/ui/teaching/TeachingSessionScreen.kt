@@ -75,6 +75,7 @@ fun TeachingSessionScreen(
     onFind: () -> Unit = {},
     onSend: () -> Unit = {},
     onStopTurn: () -> Unit = {},
+    onRetry: () -> Unit = {},
     // Dictation, into the thinking field or the composer, whichever is showing
     onDictate: () -> Unit = {},
 ) {
@@ -89,7 +90,7 @@ fun TeachingSessionScreen(
         Row(Modifier.fillMaxSize().padding(padding)) {
             // The lesson column owns the dock and composer, so a Plan beside it runs full height.
             Column(Modifier.weight(1f)) {
-                Transcript(state, Modifier.weight(1f)) { item ->
+                Transcript(state, Modifier.weight(1f), onRetry) { item ->
                     TranscriptEntry(
                         item,
                         onOpenPlan = onOpenPlan,
@@ -188,9 +189,11 @@ private fun SessionTopBar(
 private fun Transcript(
     state: TeachingSessionState,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit = {},
     entry: @Composable (TranscriptItem) -> Unit,
 ) {
-    val entries = state.transcript.size + if (state.turnRunning) 1 else 0
+    val entries = state.transcript.size + (if (state.turnRunning) 1 else 0) + state.queuedSteers.size +
+        (if (state.failure != null) 1 else 0)
     LazyColumn(
         // Opens at the latest entry, just above the dock or composer.
         state = rememberLazyListState(initialFirstVisibleItemIndex = (entries - 1).coerceAtLeast(0)),
@@ -202,6 +205,8 @@ private fun Transcript(
         if (state.turnRunning) {
             item { RunningTurnIndicator() }
         }
+        items(state.queuedSteers) { text -> QueuedSteer(text) }
+        state.failure?.let { failure -> item { FailureCard(failure, onRetry) } }
     }
 }
 

@@ -30,7 +30,9 @@ class AppContainer(
     companion object {
         fun create(context: Context): AppContainer {
             val app = context.applicationContext
-            val database = Room.databaseBuilder(app, LearnHarnessDatabase::class.java, "learnharness.db").build()
+            val database = Room.databaseBuilder(app, LearnHarnessDatabase::class.java, "learnharness.db")
+                .addMigrations(LearnHarnessDatabase.Migration1To2)
+                .build()
             val settings = SettingsRepository(database.settings(), AndroidKeystoreKeyVault())
             val engine = DefaultSessionEngine(
                 database = database,

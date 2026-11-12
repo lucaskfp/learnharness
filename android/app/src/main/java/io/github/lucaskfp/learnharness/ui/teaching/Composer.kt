@@ -30,7 +30,8 @@ import io.github.lucaskfp.learnharness.R
 
 /**
  * The composer: the message field, and beside it a floating toolbar with attach and dictate and
- * Send as its FAB. While a Turn runs, a message steers the lesson and the FAB stops the Turn.
+ * Send as its FAB. While a Turn runs, a typed message steers the lesson (the FAB sends it) and
+ * with nothing typed the FAB stops the Turn.
  */
 @Composable
 fun Composer(
@@ -78,8 +79,9 @@ fun Composer(
         HorizontalFloatingToolbar(
             expanded = true,
             floatingActionButton = {
-                FloatingToolbarDefaults.VibrantFloatingActionButton(onClick = if (turnRunning) onStop else onSend) {
-                    if (turnRunning) {
+                val stops = turnRunning && text.isBlank()
+                FloatingToolbarDefaults.VibrantFloatingActionButton(onClick = if (stops) onStop else onSend) {
+                    if (stops) {
                         Icon(painterResource(R.drawable.ic_stop), contentDescription = stringResource(R.string.stop_turn))
                     } else {
                         Icon(painterResource(R.drawable.ic_send), contentDescription = stringResource(R.string.send))

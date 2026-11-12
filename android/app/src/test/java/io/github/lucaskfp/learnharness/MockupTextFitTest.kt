@@ -119,6 +119,9 @@ private val teachMockups = listOf(
     Mockup("teach-images") { TeachingSessionScreen(FakeTeaching.teachImages()) },
     Mockup("teach-jobs") { TeachingSessionScreen(FakeTeaching.teachJobs()) },
     Mockup("teach-running") { TeachingSessionScreen(FakeTeaching.teachRunning()) },
+    Mockup("teach-steer-queued") { TeachingSessionScreen(FakeTeaching.teachSteerQueued()) },
+    Mockup("teach-failed") { TeachingSessionScreen(FakeTeaching.teachFailed()) },
+    Mockup("teach-interrupted") { TeachingSessionScreen(FakeTeaching.teachInterrupted()) },
 )
 
 private fun atBothScales(mockups: List<Mockup>): List<Array<Any>> =

@@ -22,13 +22,20 @@ import io.github.lucaskfp.learnharness.engine.question.buildAnswer
 import io.github.lucaskfp.learnharness.engine.question.compactAnswerForModel
 import io.github.lucaskfp.learnharness.engine.store.LearnHarnessDatabase
 import io.github.lucaskfp.learnharness.engine.store.MessageRow
+import io.github.lucaskfp.learnharness.engine.store.DraftRow
 import io.github.lucaskfp.learnharness.engine.store.SessionRow
+import io.github.lucaskfp.learnharness.engine.store.SteerRow
 import io.github.lucaskfp.learnharness.engine.tools.AgentKind
 import io.github.lucaskfp.learnharness.engine.tools.AgentTools
 import io.github.lucaskfp.learnharness.engine.tools.QuizMechanics
 import io.github.lucaskfp.learnharness.engine.tools.ToolContracts
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,9 +44,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /** The things outside the device the engine depends on, so tests can replace them. */
 class EngineEnvironment(
@@ -65,6 +74,7 @@ class DefaultSessionEngine(
     private val tools = AgentTools(contracts, environment.quizMechanics)
 
     private val running = MutableStateFlow<Set<String>>(emptySet())
+    private val turns = ConcurrentHashMap<String, Job>()
     private val live = MutableStateFlow<Map<String, List<ContentBlock>>>(emptyMap())
 
     /** Bumped after every change to saved state or to which Turns run; observers re-read on it. */
@@ -125,11 +135,89 @@ class DefaultSessionEngine(
                 }
             }
             persist(sessionId, listOf(message), now)
+            // What was sent is no longer a draft.
+            if (message is ToolResultMessage) database.drafts().delete(sessionId, AnswerDraftPrefix + message.toolCallId)
+            else database.drafts().delete(sessionId, ComposerDraft)
+            // A sibling question still waits: the answer is saved, and the last answer wakes the
+            // model with every result right after the message that asked.
+            if (message is ToolResultMessage && hasUnresolvedQuestion(history + message)) {
+                release(sessionId)
+                return
+            }
         } catch (e: Throwable) {
             release(sessionId)
             throw e
         }
         launchTurn(sessionId)
+    }
+
+    override suspend fun abort(sessionId: String) {
+        // An input that has just claimed the Session may not have launched its Turn yet: wait for it.
+        while (true) {
+            turns[sessionId]?.let { it.cancelAndJoin(); return }
+            if (sessionId !in running.value) return
+            delay(5)
+        }
+    }
+
+    override suspend fun retry(sessionId: String) {
+        acquire(sessionId)
+        val allowed = try {
+            endsInRetryableFailure(loadHistory(sessionId))
+        } catch (e: Throwable) {
+            release(sessionId)
+            throw e
+        }
+        if (!allowed) {
+            release(sessionId)
+            throw RetryNotAllowedException(sessionId)
+        }
+        // The provider never reads failed responses (toLlmMessages), so the Turn starts from the input before them.
+        launchTurn(sessionId)
+    }
+
+    override suspend fun steer(sessionId: String, text: String) {
+        require(text.isNotBlank()) { "A steering message cannot be empty" }
+        database.steers().insert(SteerRow(newId("steer"), sessionId, text.trim(), environment.clock()))
+        database.drafts().delete(sessionId, ComposerDraft)
+        revision.value++
+        wakeForSteers(sessionId)
+    }
+
+    /**
+     * Runs a Turn for queued steers when the Session is idle and no question waits: a steer sent as
+     * a Turn ended, or with no Turn at all. A queue behind a pending question waits for its answer.
+     */
+    private suspend fun wakeForSteers(sessionId: String) {
+        if (!tryAcquire(sessionId)) return
+        val wake = try {
+            database.steers().all(sessionId).isNotEmpty() && project(loadHistory(sessionId)).pending == null
+        } catch (e: Throwable) {
+            release(sessionId)
+            throw e
+        }
+        if (wake) launchTurn(sessionId) else release(sessionId)
+    }
+
+    override suspend fun drafts(sessionId: String): SessionDrafts {
+        val rows = database.drafts().all(sessionId)
+        return SessionDrafts(
+            composer = rows.firstOrNull { it.key == ComposerDraft }?.json?.let { LhJson.decodeFromString(String.serializer(), it) }.orEmpty(),
+            answers = rows.filter { it.key.startsWith(AnswerDraftPrefix) }.associate {
+                it.key.removePrefix(AnswerDraftPrefix) to LhJson.decodeFromString(AnswerDraft.serializer(), it.json)
+            },
+        )
+    }
+
+    override suspend fun saveComposerDraft(sessionId: String, text: String) {
+        if (text.isBlank()) database.drafts().delete(sessionId, ComposerDraft)
+        else database.drafts().put(DraftRow(sessionId, ComposerDraft, LhJson.encodeToString(String.serializer(), text)))
+    }
+
+    override suspend fun saveAnswerDraft(sessionId: String, toolCallId: String, draft: AnswerDraft?) {
+        val key = AnswerDraftPrefix + toolCallId
+        if (draft == null || draft == AnswerDraft()) database.drafts().delete(sessionId, key)
+        else database.drafts().put(DraftRow(sessionId, key, LhJson.encodeToString(AnswerDraft.serializer(), draft)))
     }
 
     override fun observe(sessionId: String): Flow<SessionView?> = combine(revision, live) { _, _ -> }
@@ -150,10 +238,17 @@ class DefaultSessionEngine(
                 transcript = projection.transcript + liveEntries(liveNow[sessionId].orEmpty()),
                 // The learner answers between Turns, never during one.
                 pendingQuestion = if (turnRunning) null else projection.pending?.let {
-                    PendingQuestionView(it.toolCallId, it.tool, it.kind, it.question, it.details, it.options, it.multiSelect, it.freeText, it.questionType)
+                    val (position, siblings) = siblingPlace(messages, it.toolCallId)
+                    PendingQuestionView(
+                        it.toolCallId, it.tool, it.kind, it.question, it.details, it.options, it.multiSelect, it.freeText,
+                        it.questionType, position, siblings,
+                    )
                 },
                 turnRunning = turnRunning,
-                error = (messages.lastOrNull() as? AssistantMessage)?.takeIf { it.stopReason == StopReason.Error }?.errorMessage,
+                failure = (messages.lastOrNull() as? AssistantMessage)?.takeIf { it.stopReason == StopReason.Error }?.let {
+                    FailureView(it.errorMessage ?: "", endsInRetryableFailure(messages))
+                },
+                queuedSteers = database.steers().all(sessionId).map { QueuedSteer(it.id, it.text) },
             )
         }
         .distinctUntilChanged()
@@ -166,7 +261,7 @@ class DefaultSessionEngine(
     }.distinctUntilChanged()
 
     /** Phases by Session, keyed to the `updatedAt` they were read at: the list reloads a history only when it changed. */
-    private val phases = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, SessionPhase>>()
+    private val phases = ConcurrentHashMap<String, Pair<Long, SessionPhase>>()
 
     private suspend fun phaseCached(row: SessionRow): SessionPhase {
         phases[row.id]?.takeIf { it.first == row.updatedAt }?.let { return it.second }
@@ -182,23 +277,51 @@ class DefaultSessionEngine(
     // ─── the Turn ───────────────────────────────────────────────────────────────────────
 
     private fun launchTurn(sessionId: String) {
-        scope.launch {
-            try {
+        // Undispatched: the Turn registers itself before launch returns, so an abort always finds it,
+        // and its body always runs, so it always settles.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val job = coroutineContext.job
+            turns[sessionId] = job
+            val endedCleanly = try {
                 runTurn(sessionId)
+            } catch (e: CancellationException) {
+                withContext(NonCancellable) { markAborted(sessionId) }
+                throw e
             } finally {
+                turns.remove(sessionId, job)
                 live.value = live.value - sessionId
                 release(sessionId)
             }
+            // A steer that arrived after the Turn's last boundary is not stranded.
+            if (endedCleanly) wakeForSteers(sessionId)
         }
+    }
+
+    /**
+     * Makes sure a cancelled Turn ends in an aborted message. The Turn adds it itself, with its
+     * partial output; this covers a cancellation that came before the Turn had begun its work.
+     */
+    private suspend fun markAborted(sessionId: String) {
+        val last = loadHistory(sessionId).lastOrNull()
+        if (last is AssistantMessage && last.stopReason == StopReason.Aborted) return
+        val session = database.sessions().get(sessionId) ?: return
+        persist(
+            sessionId,
+            listOf(AssistantMessage(newId("msg"), emptyList(), model = session.model, stopReason = StopReason.Aborted, timestamp = environment.clock())),
+            environment.clock(),
+        )
     }
 
     /**
      * Builds the agent from the saved history and loops: call the model, run its tools, call again,
      * until it stops or poses a question. Everything the Turn produced is saved once, at settlement,
-     * including partial output when the Turn is cancelled or fails.
+     * including partial output when the Turn is cancelled or fails. Steers are saved as they are
+     * delivered, together with everything the Turn produced before them, to keep the order.
+     *
+     * @return whether the Turn ended with a clean stop (not on a question, a failure or an abort).
      */
-    private suspend fun runTurn(sessionId: String) {
-        val session = database.sessions().get(sessionId) ?: return
+    private suspend fun runTurn(sessionId: String): Boolean {
+        val session = database.sessions().get(sessionId) ?: return false
         val language = TeachingLanguage.valueOf(session.teachingLanguage)
         var history = loadHistory(sessionId)
         val produced = mutableListOf<LhMessage>()
@@ -224,6 +347,8 @@ class DefaultSessionEngine(
                 val system = if (kind == AgentKind.Prober) prompts.prober(language) else prompts.teacher(language)
                 var posedQuestion = false
                 while (true) {
+                    // The safe boundary: before every model call, never between a call and its results.
+                    history = history + deliverSteers(sessionId, produced)
                     val request = ProviderRequest(
                         model = session.model,
                         systemPrompt = system,
@@ -260,11 +385,25 @@ class DefaultSessionEngine(
                 // A Prober stretch that concluded the probe and ended cleanly wakes the Teacher at
                 // once, so the learner goes from assessment to Plan without prompting.
                 val ended = history.last()
-                val concluded = kind == AgentKind.Prober && !posedQuestion && hasProbeDone(history) &&
-                    ended is AssistantMessage && ended.stopReason == StopReason.Stop
-                if (!concluded) break
+                val stopped = !posedQuestion && ended is AssistantMessage && ended.stopReason == StopReason.Stop
+                val concluded = stopped && kind == AgentKind.Prober && hasProbeDone(history)
+                // A Turn about to stop with steers waiting makes one more call to answer them.
+                val steered = stopped && database.steers().all(sessionId).isNotEmpty()
+                if (!concluded && !steered) return stopped
             }
         } catch (e: CancellationException) {
+            // An aborted Turn always ends in an aborted message, even one cut off before any
+            // output or between model calls: it marks where the learner stopped the Turn.
+            val last = produced.lastOrNull()
+            if (last !is AssistantMessage || last.stopReason != StopReason.Aborted) {
+                produced += AssistantMessage(
+                    id = newId("msg"),
+                    content = emptyList(),
+                    model = session.model,
+                    stopReason = StopReason.Aborted,
+                    timestamp = environment.clock(),
+                )
+            }
             throw e
         } catch (e: Exception) {
             // A failure before or between model calls (for example no API key) is recorded like a failed call.
@@ -281,6 +420,7 @@ class DefaultSessionEngine(
                 withContext(NonCancellable) { persist(sessionId, produced, environment.clock()) }
             }
         }
+        return false
     }
 
     /** One model call: streams events into an assistant message, surfacing it live as it grows. */
@@ -306,8 +446,7 @@ class DefaultSessionEngine(
             }
         } catch (e: CancellationException) {
             // A cancelled call keeps what it generated; the Turn saves it at settlement.
-            val partial = assistantOf(request.model, builder, StopReason.Aborted, usage, null)
-            if (partial.content.isNotEmpty()) produced += partial
+            produced += assistantOf(request.model, builder, StopReason.Aborted, usage, null)
             throw e
         } catch (e: Exception) {
             stopReason = StopReason.Error
@@ -328,6 +467,25 @@ class DefaultSessionEngine(
         )
 
     // ─── persistence and bookkeeping ────────────────────────────────────────────────────
+
+    /**
+     * Delivers the queued steers: each becomes a learner message under its steer id, saved with
+     * what the Turn produced so far while its queue row is deleted, in one transaction.
+     */
+    private suspend fun deliverSteers(sessionId: String, produced: MutableList<LhMessage>): List<LhMessage> {
+        val queued = database.steers().all(sessionId)
+        if (queued.isEmpty()) return emptyList()
+        val now = environment.clock()
+        val delivered = queued.map { UserMessage(it.id, it.text, now) }
+        database.withTransaction {
+            (produced + delivered).forEach { database.messages().insert(encode(sessionId, it)) }
+            database.steers().delete(queued.map { it.id })
+            database.sessions().touch(sessionId, now)
+        }
+        produced.clear()
+        revision.value++
+        return delivered
+    }
 
     private suspend fun loadHistory(sessionId: String): List<LhMessage> =
         database.messages().all(sessionId).map(::decode)
@@ -355,11 +513,22 @@ class DefaultSessionEngine(
         revision.value++
     }
 
+    /** Like [acquire], but reports a running Turn instead of throwing. */
+    private fun tryAcquire(sessionId: String): Boolean = synchronized(lock) {
+        if (sessionId in running.value) return false
+        running.value = running.value + sessionId
+        revision.value++
+        true
+    }
+
     private fun release(sessionId: String) = synchronized(lock) {
         running.value = running.value - sessionId
         revision.value++
     }
 }
+
+private const val ComposerDraft = "composer"
+private const val AnswerDraftPrefix = "answer:"
 
 /** Folds provider events into content blocks: consecutive deltas of one kind form one block. */
 private class AssistantBuilder {

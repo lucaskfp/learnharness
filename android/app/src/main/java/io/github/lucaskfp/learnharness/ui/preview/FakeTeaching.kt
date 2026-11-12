@@ -16,6 +16,7 @@ import io.github.lucaskfp.learnharness.ui.teaching.QuestionKind
 import io.github.lucaskfp.learnharness.ui.teaching.QuestionOption
 import io.github.lucaskfp.learnharness.ui.teaching.TeachingSessionState
 import io.github.lucaskfp.learnharness.ui.teaching.TranscriptItem
+import io.github.lucaskfp.learnharness.ui.teaching.TurnFailure
 
 /**
  * Teaching Session states for the mockups: a Session on public-key cryptography, through Probe,
@@ -259,4 +260,32 @@ object FakeTeaching {
         transcript = listOf(predictionAnswered(), explanation()),
         turnRunning = true,
     ).copy(composerText = stringResource(R.string.fake_t_steer))
+
+    /** A steer waits for the running Turn's next safe point while the learner types another. */
+    @Composable
+    fun teachSteerQueued() = teach(
+        transcript = listOf(predictionAnswered(), explanation()),
+        turnRunning = true,
+    ).copy(
+        queuedSteers = listOf(stringResource(R.string.fake_t_steer)),
+        composerText = stringResource(R.string.fake_t_steer_queued),
+    )
+
+    /** The model did not answer: the failure card offers "Try again". */
+    @Composable
+    fun teachFailed() = teach(
+        transcript = listOf(predictionAnswered(), explanation(), TranscriptItem.LearnerMessage(stringResource(R.string.fake_t_steer))),
+    ).copy(failure = TurnFailure(stringResource(R.string.fake_t_failure_reason), retryable = true))
+
+    /** The learner stopped the Turn: its partial output stays, followed by the cut. */
+    @Composable
+    fun teachInterrupted() = teach(
+        transcript = listOf(
+            predictionAnswered(),
+            explanation(),
+            TranscriptItem.LearnerMessage(stringResource(R.string.fake_t_steer)),
+            TranscriptItem.AgentProse(stringResource(R.string.fake_t_partial)),
+            TranscriptItem.Interrupted,
+        ),
+    )
 }

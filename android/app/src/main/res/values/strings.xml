@@ -85,7 +85,11 @@
     <string name="question_probe">Probe</string>
     <string name="question_recall">Recall</string>
     <string name="question_prediction">Prediction</string>
-    <string name="turn_failed">The model did not answer: %1$s</string>
+    <string name="turn_failed_title">The model did not answer</string>
+    <string name="turn_failed_send_new">Send a new message to continue.</string>
+    <string name="retry_turn">Try again</string>
+    <string name="turn_interrupted">Turn interrupted</string>
+    <string name="steer_queued">Queued</string>
     <string name="question_ask">Question</string>
     <string name="question_check">Check</string>
     <string name="question_position">%1$s · %2$d of %3$d</string>
@@ -180,4 +184,7 @@
     <string name="fake_t_research_activity">Reading 3 of 7 sources</string>
     <string name="fake_t_demo_title">Try Diffie–Hellman with small numbers</string>
     <string name="fake_t_steer">What if Eve changes A before Bob gets it?</string>
+    <string name="fake_t_steer_queued">Can you show it with small numbers?</string>
+    <string name="fake_t_failure_reason">Overloaded (529). The provider is busy right now.</string>
+    <string name="fake_t_partial">Diffie–Hellman works because exponents can be applied in either order, so</string>
 </resources>

@@ -51,6 +51,17 @@ internal fun project(messages: List<LhMessage>): Projection {
             }
             is AssistantMessage -> {
                 if (index == teachingStart) transcript += TranscriptEntry.PhaseBoundary(SessionPhase.Teaching)
+                if (message.stopReason == StopReason.Aborted) {
+                    // An aborted generation's tool calls were never run: show its prose, then the cut.
+                    message.content.forEach { block ->
+                        if (block is TextContent && block.text.isNotBlank()) transcript += TranscriptEntry.AgentText(block.text)
+                        if (block is ThinkingContent && block.redacted != true && block.thinking.isNotBlank()) {
+                            transcript += TranscriptEntry.Reasoning(block.thinking)
+                        }
+                    }
+                    transcript += TranscriptEntry.Interrupted
+                    return@forEachIndexed
+                }
                 for (block in message.content) {
                     when (block) {
                         is TextContent -> if (block.text.isNotBlank()) transcript += TranscriptEntry.AgentText(block.text)
@@ -79,6 +90,18 @@ private fun answerOf(result: ToolResultMessage): QuestionAnswerData? = try {
     result.details?.let { LhJson.decodeFromJsonElement(QuestionAnswerData.serializer(), it) }
 } catch (_: Exception) {
     null
+}
+
+/**
+ * Where the pending question [toolCallId] stands among the questions its message posed together:
+ * its 1-based place and how many there are. A question call refused with an error is not counted.
+ */
+internal fun siblingPlace(messages: List<LhMessage>, toolCallId: String): Pair<Int, Int> {
+    val asking = messages.lastOrNull { it is AssistantMessage && it.toolCalls.any { call -> call.id == toolCallId } } as? AssistantMessage
+        ?: return 1 to 1
+    val refused = messages.filterIsInstance<ToolResultMessage>().filter { it.isError }.map { it.toolCallId }.toSet()
+    val siblings = asking.toolCalls.filter { it.name in QuestionTools && it.id !in refused }.map { it.id }
+    return (siblings.indexOf(toolCallId) + 1).coerceAtLeast(1) to siblings.size.coerceAtLeast(1)
 }
 
 /** The partial output of a Turn in flight, as transcript entries. */

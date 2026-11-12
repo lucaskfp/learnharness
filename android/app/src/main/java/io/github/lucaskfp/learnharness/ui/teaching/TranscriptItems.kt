@@ -32,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
@@ -76,6 +77,56 @@ fun TranscriptEntry(
         is TranscriptItem.PlanSnapshot -> PlanBlock(item.plan, onOpenPlan, modifier)
         is TranscriptItem.ImageCard -> ImageCard(item, modifier)
         is TranscriptItem.JobCard -> JobCard(item, onAbort = { onAbortJob(item) }, onOpenDemo = { onOpenDemo(item) }, modifier)
+        TranscriptItem.Interrupted -> LabelledRule(stringResource(R.string.turn_interrupted), modifier)
+    }
+}
+
+/** A steering message not yet delivered: the learner's words, faded, marked as queued. */
+@Composable
+fun QueuedSteer(text: String, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        LearnerMessage(text, Modifier.alpha(0.6f))
+        Text(
+            stringResource(R.string.steer_queued),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** The failed response the Session ends on, with "Try again" when it can be retried. */
+@Composable
+fun FailureCard(failure: TurnFailure, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Card(
+        modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.errorContainer, contentColor = colors.onErrorContainer),
+    ) {
+        Column(Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = if (failure.retryable) 8.dp else 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(painterResource(R.drawable.ic_error), contentDescription = null, tint = colors.error)
+                Text(stringResource(R.string.turn_failed_title), style = MaterialTheme.typography.titleSmall)
+            }
+            Text(
+                failure.message,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            if (failure.retryable) {
+                TextButton(
+                    onClick = onRetry,
+                    colors = ButtonDefaults.textButtonColors(contentColor = colors.error),
+                    modifier = Modifier.align(Alignment.End),
+                ) { Text(stringResource(R.string.retry_turn)) }
+            } else {
+                Text(
+                    stringResource(R.string.turn_failed_send_new),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
     }
 }
 
@@ -161,6 +212,12 @@ private fun PhaseBoundary(item: TranscriptItem.PhaseBoundary, modifier: Modifier
     } else {
         stringResource(item.phase.label)
     }
+    LabelledRule(label, modifier)
+}
+
+/** A quiet system line across the transcript: a dotted rule with a label in the middle. */
+@Composable
+private fun LabelledRule(label: String, modifier: Modifier = Modifier) {
     val color = MaterialTheme.colorScheme.outline
     Row(modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         DottedRule(color, Modifier.weight(1f))

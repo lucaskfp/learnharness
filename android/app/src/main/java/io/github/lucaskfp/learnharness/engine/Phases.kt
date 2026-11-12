@@ -88,3 +88,14 @@ internal fun planViewOf(messages: List<LhMessage>): PlanView? {
 
 internal fun planView(tree: PlanTree, position: PlanPosition) =
     PlanView(tree.nodes, tree.edges, position.current, position.visited)
+
+/**
+ * Can the failed responses the history ends on be retried (upstream `endsInFailedTurn`)? There must
+ * be at least one, and what precedes them must be input to continue from, not another response.
+ * An aborted Turn is a deliberate stop, never a failure.
+ */
+internal fun endsInRetryableFailure(messages: List<LhMessage>): Boolean {
+    var i = messages.lastIndex
+    while (i >= 0 && (messages[i] as? AssistantMessage)?.stopReason == StopReason.Error) i--
+    return i < messages.lastIndex && i >= 0 && messages[i] !is AssistantMessage
+}
